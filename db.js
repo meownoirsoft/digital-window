@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
@@ -13,8 +13,21 @@ const DEFAULT_SETTINGS = {
 
 export function openDb(file) {
   mkdirSync(dirname(file), { recursive: true });
-  const db = new Database(file);
-  db.pragma('journal_mode = WAL');
+  const db = new DatabaseSync(file);
+  db.exec('PRAGMA journal_mode = WAL');
+
+  // node:sqlite has no transaction helper; wrap fn in BEGIN/COMMIT.
+  const transaction = (fn) => (...args) => {
+    db.exec('BEGIN');
+    try {
+      const out = fn(...args);
+      db.exec('COMMIT');
+      return out;
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
+    }
+  };
   db.exec(`
     CREATE TABLE IF NOT EXISTS items (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,12 +91,12 @@ export function openDb(file) {
 
     deleteItem: (id) => q.del.run(id).changes > 0,
 
-    reorder: db.transaction((ids) => {
+    reorder: transaction((ids) => {
       ids.forEach((id, i) => q.setPos.run(i, id));
     }),
 
     getSettings: () => Object.fromEntries(q.settings.all().map((r) => [r.key, r.value])),
-    setSettings: db.transaction((obj) => {
+    setSettings: transaction((obj) => {
       for (const [k, v] of Object.entries(obj)) {
         if (k in DEFAULT_SETTINGS) q.setSetting.run(k, String(v));
       }

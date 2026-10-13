@@ -5,7 +5,7 @@ A self-hosted "window" for a TV or monitor. It plays a playlist of **YouTube vid
 - **`/admin`**: paste a YouTube URL or ID, search NASA's library, add feeds, drag to reorder, set durations, toggle items on and off.
 - **`/player`**: open this fullscreen on the display (for example a Raspberry Pi in Chromium kiosk mode). Changes made in the admin page reach it within a second, with no reload needed.
 
-## Quick start
+## Quick start (any computer)
 
 ```bash
 npm install
@@ -13,7 +13,7 @@ cp .env.example .env      # optional: add a free NASA_API_KEY from https://api.n
 npm start                 # http://localhost:3000/admin
 ```
 
-Requires Node 20+. Data lives in `data/window.db` (SQLite).
+Requires Node 22.13+. Data lives in `data/window.db` (SQLite, via Node's built-in `node:sqlite`, so there are no native modules to compile).
 
 ## Why YouTube works here when Anthias/Yodeck often fail
 
@@ -39,24 +39,38 @@ APOD is re-resolved each time it comes round, so it updates daily. The "NASA —
 
 ## Raspberry Pi kiosk
 
-Tested layout: Raspberry Pi 4 or 5 running Raspberry Pi OS Bookworm (desktop) with Node 20+.
+Works on a Pi 4 or 5 running **64-bit Raspberry Pi OS (Bookworm or newer) with the desktop**. Run the installer as your normal user, over SSH or in a terminal on the Pi:
 
 ```bash
-git clone <this repo> ~/digital-window && cd ~/digital-window && npm install
-sudo cp kiosk/digital-window.service /etc/systemd/system/
-sudo systemctl enable --now digital-window      # edit User/WorkingDirectory first if not "pi"
+curl -fsSL https://raw.githubusercontent.com/<you>/digital-window/main/install.sh \
+  | REPO_URL=https://github.com/<you>/digital-window.git bash
+sudo reboot
 ```
 
-Then start the browser at login. Which file to edit depends on the compositor (`echo $XDG_SESSION_TYPE`, plus `raspi-config` → Advanced → Wayland):
+Or, without GitHub, build a bundle on your computer and copy it over:
 
-- **labwc** (Bookworm default since late 2024): add `/home/pi/digital-window/kiosk/chromium-kiosk.sh &` to `~/.config/labwc/autostart`
-- **Wayfire**: add `window = /home/pi/digital-window/kiosk/chromium-kiosk.sh` under `[autostart]` in `~/.config/wayfire.ini`
-- **X11**: `cp kiosk/digital-window-kiosk.desktop ~/.config/autostart/`
+```bash
+npm run pack                                  # → dist/digital-window-<version>.tar.gz
+scp dist/digital-window-*.tar.gz pi@<pi-ip>:~
+ssh pi@<pi-ip> 'tar xzf digital-window-*.tar.gz && ./digital-window/install.sh'
+```
+
+The installer:
+1. installs Node 22 LTS if needed
+2. installs the app's dependencies, or uses the bundled ones
+3. asks for your NASA API key and writes `.env`
+4. sets up a systemd service (`digital-window`)
+5. adds the fullscreen Chromium player to the desktop's autostart (labwc, Wayfire or X11)
+6. turns off screen blanking and switches on desktop autologin
+
+**Updating:** re-run the same command. It pulls or uses the new files, keeps `.env` and `data/`, and restarts the service.
+
+Options: `--no-kiosk` sets up the server only, `--uninstall` removes the service and autostart entries, and `SKIP_AUTOLOGIN=1` leaves the boot settings alone.
 
 Tips:
 - Manage the playlist from your phone or laptop at `http://<pi-ip>:3000/admin`.
-- A Pi 4 handles 1080p well; set the display to 1920×1080 rather than 4K (Screen Configuration, or `raspi-config`).
-- Disable screen blanking: `raspi-config` → Display Options → Screen Blanking → No.
+- Set the display to 1920×1080 rather than 4K (Screen Configuration). It's smoother, and YouTube picks a suitable quality.
+- Logs: `journalctl -u digital-window -f`.
 - The player reloads itself once a day to keep long-running Chromium healthy.
 - On a desktop, press → in the player to skip and `r` to reload.
 
@@ -68,5 +82,6 @@ There's no login. Anyone on your network who can reach port 3000 can edit the pl
 
 ```bash
 npm run dev     # restarts on file changes
-npm test        # YouTube URL parser tests
+npm test        # parser + database tests
+npm run pack    # build a release tarball in dist/
 ```
