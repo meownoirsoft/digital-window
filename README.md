@@ -42,8 +42,7 @@ APOD is re-resolved each time it comes round, so it updates daily. The "NASA —
 Works on a Pi 4 or 5 running **64-bit Raspberry Pi OS (Bookworm or newer) with the desktop**. Run the installer as your normal user, over SSH or in a terminal on the Pi:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<you>/digital-window/main/install.sh \
-  | REPO_URL=https://github.com/<you>/digital-window.git bash
+curl -fsSL https://raw.githubusercontent.com/meownoirsoft/digital-window/main/install.sh | bash
 sudo reboot
 ```
 
