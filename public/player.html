@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- YouTube needs a Referer to accept embeds (avoids "Error 153 / Video unavailable"). -->
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Digital Window</title>
+  <link rel="stylesheet" href="/player.css">
+</head>
+<body>
+  <div class="layer" id="layer-a"></div>
+  <div class="layer" id="layer-b"></div>
+  <div id="idle" hidden>
+    <p class="idle-title">Digital Window</p>
+    <p class="idle-sub">Playlist is empty — add something at <span id="admin-url"></span></p>
+  </div>
+  <script src="/player.js" type="module"></script>
+</body>
+</html>

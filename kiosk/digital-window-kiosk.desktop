@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Digital Window kiosk
+Exec=/home/pi/digital-window/kiosk/chromium-kiosk.sh
+X-GNOME-Autostart-enabled=true

@@ -1,0 +1,353 @@
+// Kiosk player: plays enabled playlist items in order, forever.
+// Each item is mounted into the hidden layer, shown once it's actually playing,
+// then crossfaded in. Playlist edits arrive over SSE and apply from the next item.
+
+const READY_TIMEOUT_MS = 25_000;
+const STALL_LIMIT_MS = 60_000;
+const RETRY_MS = 10_000;
+const RELOAD_AFTER_MS = 24 * 60 * 60 * 1000;
+
+const layers = [document.getElementById('layer-a'), document.getElementById('layer-b')];
+const idle = document.getElementById('idle');
+document.getElementById('admin-url').textContent = `${location.origin}/admin`;
+
+let playlist = [];
+let settings = {};
+let front = 0;            // index into layers of the visible layer
+let current = null;       // { item, slot }
+let lastIndex = -1;
+let busy = false;
+let failStreak = 0;
+let retryTimer = null;
+const bootedAt = Date.now();
+
+// --- helpers ------------------------------------------------------------------
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const num = (v, d) => (Number(v) > 0 ? Number(v) : d);
+
+function withTimeout(p, ms, msg) {
+  return Promise.race([p, sleep(ms).then(() => { throw new Error(msg); })]);
+}
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || `${res.status}`);
+  return body;
+}
+const post = (path, body) => api(path, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+}).catch(() => {});
+
+// A deferred "ended" signal each mount resolves (finished) or rejects (failed).
+function makeSlot() {
+  let finish, fail;
+  const ended = new Promise((res, rej) => { finish = res; fail = rej; });
+  ended.catch(() => {});
+  const cleanups = [];
+  return {
+    ended, finish, fail,
+    onDestroy: (fn) => cleanups.push(fn),
+    destroy: () => { for (const fn of cleanups.splice(0)) { try { fn(); } catch {} } },
+  };
+}
+
+function timer(slot, seconds) {
+  const t = setTimeout(slot.finish, seconds * 1000);
+  slot.onDestroy(() => clearTimeout(t));
+}
+
+// Fail the slot if playback position stops moving for STALL_LIMIT_MS.
+function stallWatch(slot, getTime) {
+  let last = -1, since = Date.now();
+  const iv = setInterval(() => {
+    const t = getTime();
+    if (t !== last) { last = t; since = Date.now(); }
+    else if (Date.now() - since > STALL_LIMIT_MS) slot.fail(new Error('Playback stalled'));
+  }, 5000);
+  slot.onDestroy(() => clearInterval(iv));
+}
+
+function caption(layer, text) {
+  if (!text || settings.show_captions === '0') return;
+  const c = document.createElement('div');
+  c.className = 'caption';
+  c.textContent = text;
+  layer.append(c);
+}
+
+// --- YouTube ------------------------------------------------------------------
+let ytApi;
+function loadYouTubeApi() {
+  ytApi ??= new Promise((resolve, reject) => {
+    if (window.YT?.Player) return resolve(window.YT);
+    window.onYouTubeIframeAPIReady = () => resolve(window.YT);
+    const s = document.createElement('script');
+    s.src = 'https://www.youtube.com/iframe_api';
+    s.onerror = () => { ytApi = null; reject(new Error('Could not load YouTube API (offline?)')); };
+    document.head.append(s);
+  });
+  return ytApi;
+}
+
+const YT_ERRORS = {
+  2: 'Invalid video ID',
+  5: 'HTML5 player error',
+  100: 'Video removed or private',
+  101: 'Owner does not allow embedding',
+  150: 'Owner does not allow embedding',
+  153: 'Missing referrer — open the player over http(s), not file://',
+};
+
+async function mountYouTube(layer, { videoId, channelId, start = 0, isLive }, maxSec, liveSec) {
+  const YT = await loadYouTubeApi();
+  const slot = makeSlot();
+
+  // We build the iframe ourselves (rather than letting YT.Player do it) so the
+  // referrer policy and autoplay permissions are set before the first request.
+  const params = new URLSearchParams({
+    enablejsapi: '1', autoplay: '1', mute: '1', controls: '0', playsinline: '1',
+    rel: '0', iv_load_policy: '3', cc_load_policy: '0', disablekb: '1', fs: '0', modestbranding: '1',
+    origin: location.origin,
+  });
+  if (start) params.set('start', String(start));
+  if (channelId) videoId = (await api(`/api/resolve/channel-live/${channelId}`)).videoId;
+
+  const iframe = document.createElement('iframe');
+  iframe.src = `https://www.youtube.com/embed/${videoId}?${params}`;
+  iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
+  iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+  layer.append(iframe);
+
+  let player;
+  const ready = new Promise((resolve, reject) => {
+    player = new YT.Player(iframe, {
+      events: {
+        onReady: (e) => { e.target.mute(); e.target.playVideo(); },
+        onStateChange: (e) => {
+          if (e.data === YT.PlayerState.PLAYING) resolve();
+          if (e.data === YT.PlayerState.ENDED) slot.finish();
+        },
+        onError: (e) => {
+          const err = new Error(YT_ERRORS[e.data] || `YouTube error ${e.data}`);
+          reject(err);
+          slot.fail(err);
+        },
+      },
+    });
+  });
+  slot.onDestroy(() => { player?.destroy?.(); iframe.remove(); });
+
+  slot.ready = ready.then(() => {
+    const live = isLive || channelId || player.getDuration?.() === 0;
+    const cap = live ? (maxSec || liveSec) : maxSec;
+    if (cap) timer(slot, cap);
+    stallWatch(slot, () => player.getCurrentTime?.());
+  });
+  return slot;
+}
+
+// --- Stills & video ------------------------------------------------------------
+function mountImage(layer, url, seconds, captionText) {
+  const slot = makeSlot();
+  const img = new Image();
+  img.className = 'still kenburns';
+  img.style.setProperty('--kb-dur', `${seconds}s`);
+  img.referrerPolicy = 'no-referrer';
+  img.src = url;
+  layer.append(img);
+  caption(layer, captionText);
+  slot.ready = img.decode().catch(() => { throw new Error('Image failed to load'); })
+    .then(() => timer(slot, seconds));
+  slot.onDestroy(() => { img.src = ''; });
+  return slot;
+}
+
+function mountVideo(layer, url, maxSec, captionText) {
+  const slot = makeSlot();
+  const v = document.createElement('video');
+  Object.assign(v, { muted: true, autoplay: true, playsInline: true, preload: 'auto', src: url });
+  v.setAttribute('muted', '');
+  layer.append(v);
+  caption(layer, captionText);
+  slot.ready = new Promise((resolve, reject) => {
+    v.addEventListener('playing', resolve, { once: true });
+    v.addEventListener('error', () => reject(new Error('Video failed to load')), { once: true });
+    v.play().catch(() => {});
+  }).then(() => {
+    if (maxSec) timer(slot, maxSec);
+    stallWatch(slot, () => v.currentTime);
+  });
+  v.addEventListener('ended', slot.finish);
+  v.addEventListener('error', () => slot.fail(new Error('Video playback error')));
+  slot.onDestroy(() => { v.pause(); v.removeAttribute('src'); v.load(); });
+  return slot;
+}
+
+function mountSlideshow(layer, images, totalSec) {
+  const slot = makeSlot();
+  const box = document.createElement('div');
+  box.className = 'slideshow';
+  layer.append(box);
+  const per = Math.max(2, totalSec / images.length);
+  const imgs = images.map(({ url }) => {
+    const img = new Image();
+    img.className = 'still';
+    img.loading = 'eager';
+    img.src = url;
+    box.append(img);
+    return img;
+  });
+  const cap = document.createElement('div');
+  cap.className = 'caption';
+  if (settings.show_captions !== '0') layer.append(cap);
+
+  let i = 0;
+  const show = () => {
+    imgs.forEach((img, k) => img.classList.toggle('on', k === i));
+    cap.textContent = images[i].caption;
+  };
+  slot.ready = imgs[0].decode().catch(() => { throw new Error('EPIC image failed to load'); }).then(() => {
+    show();
+    const iv = setInterval(() => {
+      i += 1;
+      if (i >= imgs.length) return slot.finish();
+      show();
+    }, per * 1000);
+    slot.onDestroy(() => clearInterval(iv));
+  });
+  slot.onDestroy(() => imgs.forEach((img) => { img.src = ''; }));
+  return slot;
+}
+
+// --- Dispatch -----------------------------------------------------------------
+async function mount(item, layer) {
+  const p = item.payload ?? {};
+  const still = num(item.duration_sec, num(settings.still_duration_sec, 30));
+  const live = num(settings.live_duration_sec, 1800);
+  const max = item.duration_sec || 0;
+
+  switch (item.type) {
+    case 'youtube':
+      return mountYouTube(layer, p, max, live);
+    case 'nasa_image':
+      return mountImage(layer, p.url, still, item.title);
+    case 'nasa_video':
+      return mountVideo(layer, p.url, max, item.title);
+    case 'apod': {
+      const a = await api('/api/resolve/apod');
+      if (a.kind === 'youtube') return mountYouTube(layer, { videoId: a.videoId, start: a.start }, max, live);
+      if (a.kind === 'video') return mountVideo(layer, a.url, max, a.caption);
+      return mountImage(layer, a.url, still, `APOD ${a.date}: ${a.caption}`);
+    }
+    case 'epic': {
+      const e = await api('/api/resolve/epic');
+      return mountSlideshow(layer, e.images, num(item.duration_sec, num(settings.epic_duration_sec, 60)));
+    }
+    default:
+      throw new Error(`Unknown item type ${item.type}`);
+  }
+}
+
+// --- Playlist & loop ----------------------------------------------------------
+async function refresh() {
+  try {
+    const [items, s] = await Promise.all([api('/api/items'), api('/api/settings')]);
+    playlist = items.filter((i) => i.enabled);
+    settings = s;
+    return true;
+  } catch {
+    return false; // offline — keep whatever we had
+  }
+}
+
+function pickNext() {
+  if (!playlist.length) return null;
+  const cur = current ? playlist.findIndex((i) => i.id === current.item.id) : -1;
+  // If the current item was removed or disabled, continue from where it used to be.
+  const base = cur >= 0 ? cur : lastIndex < 0 ? -1 : Math.min(lastIndex, playlist.length) - 1;
+  const idx = (base + 1 + playlist.length) % playlist.length;
+  lastIndex = idx;
+  return playlist[idx];
+}
+
+function scheduleRetry(ms) {
+  clearTimeout(retryTimer);
+  retryTimer = setTimeout(advance, ms);
+}
+
+async function advance() {
+  if (busy) return;
+  busy = true;
+  clearTimeout(retryTimer);
+  try {
+    if (Date.now() - bootedAt > RELOAD_AFTER_MS) return location.reload();
+
+    const item = pickNext();
+    if (!item) {
+      current?.slot.destroy();
+      current = null;
+      layers.forEach((l) => { l.classList.remove('show'); l.replaceChildren(); });
+      idle.hidden = false;
+      return scheduleRetry(RETRY_MS);
+    }
+
+    const back = layers[1 - front];
+    back.replaceChildren();
+    let slot;
+    try {
+      slot = await mount(item, back);
+      await withTimeout(slot.ready, READY_TIMEOUT_MS, 'Timed out waiting for playback to start');
+    } catch (err) {
+      slot?.destroy();
+      back.replaceChildren();
+      console.warn('[window] skipping', item.id, item.title, err.message);
+      post(`/api/items/${item.id}/error`, { error: err.message });
+      failStreak += 1;
+      // Pretend we played it so pickNext moves past it.
+      current = { item, slot: current?.slot ?? makeSlot() };
+      // Every item failing in a row usually means we're offline: back off.
+      return scheduleRetry(failStreak >= playlist.length ? RETRY_MS : 0);
+    }
+
+    failStreak = 0;
+    idle.hidden = true;
+    const old = current?.slot;
+    back.classList.add('show');
+    layers[front].classList.remove('show');
+    const oldLayer = layers[front];
+    front = 1 - front;
+    current = { item, slot };
+    setTimeout(() => { old?.destroy(); if (!oldLayer.classList.contains('show')) oldLayer.replaceChildren(); }, 1400);
+
+    post('/api/now-playing', { id: item.id });
+    slot.ended.then(
+      () => { if (current?.slot === slot) advance(); },
+      (err) => {
+        if (current?.slot !== slot) return;
+        post(`/api/items/${item.id}/error`, { error: err.message });
+        advance();
+      },
+    );
+  } finally {
+    busy = false;
+  }
+}
+
+// Live updates from the admin page.
+const events = new EventSource('/api/events');
+events.addEventListener('playlist-changed', async () => {
+  await refresh();
+  // If the current item was disabled or deleted, move on now.
+  if (current && !playlist.some((i) => i.id === current.item.id)) advance();
+  else if (!current) advance();
+});
+
+// Handy when testing on a desktop: → skips, R reloads.
+addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') advance();
+  if (e.key === 'r') location.reload();
+});
+
+await refresh();
+advance();

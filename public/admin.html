@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Digital Window — Admin</title>
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+  <header>
+    <h1>Digital Window</h1>
+    <a class="btn ghost" href="/player" target="_blank" rel="noopener">Open player ↗</a>
+  </header>
+
+  <main>
+    <section class="panel add">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="yt" aria-selected="true">YouTube</button>
+        <button role="tab" data-tab="lib" aria-selected="false">NASA library</button>
+        <button role="tab" data-tab="feeds" aria-selected="false">NASA feeds &amp; live</button>
+      </nav>
+
+      <div class="tab" data-panel="yt">
+        <form id="yt-form" class="row">
+          <input id="yt-input" type="text" placeholder="Paste a YouTube URL or 11-character video ID" autocomplete="off" required>
+          <label class="check"><input id="yt-live" type="checkbox"> Live stream</label>
+          <button class="btn" type="submit">Add</button>
+        </form>
+        <p class="hint">Accepts watch, youtu.be, Shorts, /live/ and /embed/ links. A <code>?t=</code> start time is kept.</p>
+      </div>
+
+      <div class="tab" data-panel="lib" hidden>
+        <form id="lib-form" class="row">
+          <input id="lib-q" type="search" placeholder="Search images.nasa.gov — e.g. nebula, Artemis, Jupiter" required>
+          <select id="lib-type">
+            <option value="image">Images</option>
+            <option value="video">Videos</option>
+          </select>
+          <button class="btn" type="submit">Search</button>
+        </form>
+        <div id="lib-results" class="grid"></div>
+      </div>
+
+      <div class="tab" data-panel="feeds" hidden>
+        <div class="feeds">
+          <div class="feed">
+            <div><strong>Astronomy Picture of the Day</strong><p class="hint">Updates daily. Shows a still, or a video when APOD posts one.</p></div>
+            <button class="btn" data-add-kind="apod">Add</button>
+          </div>
+          <div class="feed">
+            <div><strong>EPIC — Earth from DSCOVR</strong><p class="hint">Slideshow of the latest day's full-disc Earth photos.</p></div>
+            <button class="btn" data-add-kind="epic">Add</button>
+          </div>
+          <div id="presets"></div>
+        </div>
+      </div>
+      <p id="msg" role="status"></p>
+    </section>
+
+    <section class="panel">
+      <div class="list-head">
+        <h2>Playlist <span id="count" class="muted"></span></h2>
+        <span class="hint">Drag to reorder — plays top to bottom, then loops.</span>
+      </div>
+      <ol id="list"></ol>
+      <p id="empty" class="hint" hidden>Nothing yet. Add a video or a NASA feed above.</p>
+    </section>
+
+    <details class="panel settings">
+      <summary>Settings</summary>
+      <form id="settings-form" class="settings-grid">
+        <label>Still image duration (s) <input name="still_duration_sec" type="number" min="1"></label>
+        <label>Live stream duration (s) <input name="live_duration_sec" type="number" min="1"></label>
+        <label>EPIC slideshow duration (s) <input name="epic_duration_sec" type="number" min="1"></label>
+        <label class="check"><input name="show_captions" type="checkbox"> Show captions on stills</label>
+        <button class="btn" type="submit">Save settings</button>
+      </form>
+    </details>
+  </main>
+
+  <template id="item-tpl">
+    <li class="item">
+      <span class="handle" title="Drag to reorder" aria-hidden="true">⋮⋮</span>
+      <div class="thumb"></div>
+      <div class="meta">
+        <div class="title"></div>
+        <div class="sub"><span class="badge type"></span><span class="badge live" hidden>LIVE</span><span class="badge now" hidden>▶ Now playing</span><span class="source"></span></div>
+        <div class="error" hidden></div>
+      </div>
+      <label class="dur" title="Leave blank to play to the end (videos) or use the default (stills)">
+        <input type="number" min="1" placeholder="auto"> s
+      </label>
+      <label class="switch" title="Enabled"><input type="checkbox" class="enabled"><span></span></label>
+      <button class="icon del" title="Remove" aria-label="Remove">✕</button>
+    </li>
+  </template>
+
+  <script src="/vendor/Sortable.min.js"></script>
+  <script src="/admin.js" type="module"></script>
+</body>
+</html>

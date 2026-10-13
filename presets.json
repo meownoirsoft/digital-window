@@ -1,0 +1,12 @@
+[
+  {
+    "title": "NASA — whatever is live now",
+    "note": "Plays the current live stream on youtube.com/@NASA (launches, spacewalks, ISS views). Skips automatically when nothing is live.",
+    "channelId": "UCLA_DiR1FfKNvjuUpBHmylQ"
+  },
+  {
+    "title": "NASA Video — live",
+    "note": "Live stream on the NASA Video channel, if any.",
+    "channelId": "UC_aP7p621ATY_yAa8jMqUVA"
+  }
+]
