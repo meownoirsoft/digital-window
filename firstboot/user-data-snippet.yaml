@@ -7,7 +7,8 @@
 ##   from the top line of that file.
 ## - If the file already has a "runcmd:" or "power_state:" section, add these
 ##   entries to that section instead of adding a second one.
-## - Replace DEMO_KEY with your free key from https://api.nasa.gov (optional).
+## - Optional: put your free key from https://api.nasa.gov on the NASA_KEY line
+##   below (keep the quotes). DEMO_KEY works but is rate-limited.
 ##
 ## First boot then takes ~5–10 minutes: it waits for the network, installs the
 ## app, and reboots straight into the fullscreen player.
@@ -17,11 +18,12 @@ runcmd:
   - - sh
     - -c
     - |
+      NASA_KEY="DEMO_KEY"
       # Wait up to 5 minutes for the network (Wi-Fi can come up after cloud-init starts).
       for i in $(seq 60); do curl -fsI https://github.com >/dev/null 2>&1 && break; sleep 5; done
       # The desktop user Imager created (first regular account, uid 1000).
       u=$(getent passwd 1000 | cut -d: -f1)
-      su - "$u" -c "curl -fsSL https://raw.githubusercontent.com/meownoirsoft/digital-window/main/install.sh | NASA_API_KEY=DEMO_KEY bash" \
+      su - "$u" -c "curl -fsSL https://raw.githubusercontent.com/meownoirsoft/digital-window/main/install.sh | NASA_API_KEY=$NASA_KEY bash" \
         > /var/log/digital-window-install.log 2>&1
 
 power_state:

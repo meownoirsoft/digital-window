@@ -28,7 +28,7 @@ Needs **Raspberry Pi Imager 2.0 or newer** and **Raspberry Pi OS (64-bit) with d
 3. **Paste** the contents of [`firstboot/user-data-snippet.yaml`](firstboot/user-data-snippet.yaml) at the **end** of `user-data`:
    - Leave the first line, `#cloud-config`, and everything Imager wrote.
    - If `user-data` already has a `runcmd:` or `power_state:` section, add the new lines to that section instead of creating a second one.
-   - Optionally, replace `DEMO_KEY` with your free [NASA API key](https://api.nasa.gov).
+   - Optionally, put your free [NASA API key](https://api.nasa.gov) on the `NASA_KEY="DEMO_KEY"` line, keeping the quotes.
    - Save, then eject the card safely.
 4. **Boot the Pi** with the card, the screen and the network connected. The first boot takes **5–10 minutes**. It waits for the network, installs everything, then reboots into the fullscreen player.
 5. **Open the admin page** from another device on the same network: `http://<hostname>.local:3000/admin`, using the hostname you set in Imager, or `http://<pi-ip>:3000/admin`.
