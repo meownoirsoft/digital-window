@@ -158,7 +158,7 @@ sudo systemctl enable "$SERVICE" >/dev/null 2>&1
 sudo systemctl restart "$SERVICE"
 
 for _ in $(seq 30); do
-  curl -fsS -o /dev/null "http://localhost:$APP_PORT/api/items" && break
+  curl -fsS -o /dev/null "http://localhost:$APP_PORT/api/items" 2>/dev/null && break
   sleep 1
 done
 curl -fsS -o /dev/null "http://localhost:$APP_PORT/api/items" \
