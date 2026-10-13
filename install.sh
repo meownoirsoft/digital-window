@@ -122,9 +122,11 @@ fi
 # --- 4. Config ----------------------------------------------------------------
 if [ ! -f .env ]; then
   key=${NASA_API_KEY:-}
-  if [ -z "$key" ] && [ -r /dev/tty ]; then
+  # Only prompt when there's a real terminal. Under cloud-init/systemd /dev/tty
+  # exists but can't be opened, and that would abort the script under set -e.
+  if [ -z "$key" ] && { : </dev/tty; } 2>/dev/null; then
     printf 'NASA API key (free at https://api.nasa.gov; Enter = DEMO_KEY): ' > /dev/tty
-    read -r key < /dev/tty || true
+    read -r -t 300 key < /dev/tty || true
   fi
   printf 'NASA_API_KEY=%s\nPORT=%s\n' "${key:-DEMO_KEY}" "${PORT:-3000}" > .env
   say "Wrote .env"
