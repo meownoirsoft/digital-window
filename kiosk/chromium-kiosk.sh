@@ -31,11 +31,16 @@ park_cursor() {
     xdotool mousemove 100000 100000
   fi
 }
+# This script execs Chromium below, so $$ becomes Chromium's PID; the loop
+# stops once Chromium exits instead of grabbing the mouse forever.
+kiosk_pid=$$
 (
   # A few times while Chromium starts and the page loads, then every few
   # minutes so it stays hidden after the player's daily reload.
-  for delay in 5 10 20 30; do sleep "$delay"; park_cursor; done
-  while sleep 300; do park_cursor; done
+  for delay in 5 10 20 30; do
+    sleep "$delay"; kill -0 "$kiosk_pid" 2>/dev/null || exit; park_cursor
+  done
+  while sleep 300 && kill -0 "$kiosk_pid" 2>/dev/null; do park_cursor; done
 ) >/dev/null 2>&1 &
 command -v unclutter >/dev/null && unclutter -idle 0.5 -root &
 
