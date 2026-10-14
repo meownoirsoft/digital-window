@@ -12,11 +12,15 @@ command -v unclutter >/dev/null && unclutter -idle 0.5 -root &
 PREFS="$HOME/.config/chromium/Default/Preferences"
 [ -f "$PREFS" ] && sed -i 's/"exited_cleanly":false/"exited_cleanly":true/; s/"exit_type":"[^"]*"/"exit_type":"Normal"/' "$PREFS"
 
+# WebRtcPipeWireCamera makes Chromium ask the desktop's camera portal whenever a
+# page lists media devices, which pops up "An app wants to access camera devices"
+# over the player. A display has no camera, so turn that path off.
 BROWSER=$(command -v chromium-browser || command -v chromium)
 exec "$BROWSER" \
   --kiosk "$URL" \
   --noerrdialogs --disable-infobars --no-first-run \
-  --disable-session-crashed-bubble --disable-features=Translate \
+  --disable-session-crashed-bubble \
+  --disable-features=Translate,WebRtcPipeWireCamera \
   --autoplay-policy=no-user-gesture-required \
   --deny-permission-prompts \
   --check-for-update-interval=31536000 \
