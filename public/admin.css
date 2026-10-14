@@ -133,8 +133,11 @@ input[type=text], input[type=search], input[type=number], select {
 .badge.live { background: var(--live); border-color: var(--live); color: #fff; }
 .badge.now { background: var(--ok); border-color: var(--ok); color: #fff; }
 .error { font-size: 12px; color: var(--danger); margin-top: 2px; }
-.dur { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 13px; }
+.timing { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.start[hidden] { display: none; }
+.dur, .start { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 13px; }
 .dur input { width: 74px; padding: 5px 6px; }
+.start input { width: 64px; padding: 5px 6px; }
 
 .switch { position: relative; width: 36px; height: 20px; flex: none; }
 .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
@@ -154,6 +157,6 @@ input[type=text], input[type=search], input[type=number], select {
   .handle { grid-area: h; }
   .meta { grid-area: m; }
   .del { grid-area: d; justify-self: end; }
-  .dur { grid-area: s; }
+  .timing { grid-area: s; }
   .switch { grid-area: x; justify-self: end; }
 }

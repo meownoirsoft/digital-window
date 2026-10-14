@@ -113,12 +113,14 @@ Uninstall removes the managed policy file but keeps the kiosk profile.
 
 | Type | Plays for |
 |---|---|
-| YouTube video | its full length (or the per-item seconds, if set) |
-| YouTube playlist | every video in it, first to last, then on to your next item (or the per-item seconds, if set) |
+| YouTube video | its full length |
+| YouTube playlist | every video in it, first to last, then on to your next item |
 | YouTube live / NASA live preset | *Live stream duration* setting (default 30 min) |
 | NASA image, APOD still | *Still image duration* (default 30 s), with a slow Ken Burns pan |
 | NASA video, APOD video | its full length |
 | EPIC | slideshow of the latest day's Earth images over *EPIC duration* (default 60 s; at least 2 s per image) |
+
+Each item in the list has a **Play [auto] s** box: leave it on *auto* for the defaults above, or enter seconds to cut it short (or, for stills and live streams, to show it longer). YouTube and NASA videos also have a **Start** box (`90`, `1:30` or `1m30s`); a `?t=` in a pasted YouTube link fills it in.
 
 APOD (Astronomy Picture of the Day) is re-checked each time it comes round, so it changes daily. The "NASA — whatever is live now" preset plays whatever is currently live on NASA's YouTube channel and is skipped when nothing is. To add other channels, edit `presets.json` (any `UC…` channel ID).
 

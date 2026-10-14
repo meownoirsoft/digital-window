@@ -91,9 +91,14 @@
         <div class="sub"><span class="badge type"></span><span class="badge live" hidden>LIVE</span><span class="badge now" hidden>▶ Now playing</span><span class="source"></span></div>
         <div class="error" hidden></div>
       </div>
-      <label class="dur" title="Leave blank to play to the end (videos) or use the default (stills)">
-        <input type="number" min="1" placeholder="auto"> s
-      </label>
+      <div class="timing">
+        <label class="start" title="Where the video starts, e.g. 90, 1:30 or 1m30s">
+          Start <input type="text" inputmode="numeric" placeholder="0:00">
+        </label>
+        <label class="dur" title="Leave blank to play to the end (videos) or use the default (stills)">
+          Play <input type="number" min="1" placeholder="auto"> s
+        </label>
+      </div>
       <label class="switch" title="Enabled"><input type="checkbox" class="enabled"><span></span></label>
       <button class="icon del" title="Remove" aria-label="Remove">✕</button>
     </li>

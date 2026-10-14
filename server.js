@@ -5,7 +5,7 @@ import { hostname, networkInterfaces } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openDb } from './db.js';
-import { parseYouTube, parsePlaylist } from './lib/youtube.js';
+import { parseYouTube, parsePlaylist, parseTime } from './lib/youtube.js';
 import { searchLibrary, resolveAsset, resolveApod, resolveEpic, resolveChannelLive } from './lib/nasa.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -183,6 +183,9 @@ app.post('/api/items', async (req) => {
   return item;
 });
 
+// Item types whose start point can be set (live streams and playlists can't seek).
+const START_TYPES = new Set(['youtube', 'nasa_video']);
+
 app.patch('/api/items/:id', async (req, reply) => {
   const id = Number(req.params.id);
   if (!db.getItem(id)) return reply.code(404).send({ error: 'Not found' });
@@ -192,6 +195,13 @@ app.patch('/api/items/:id', async (req, reply) => {
   if ('enabled' in b) patch.enabled = !!b.enabled;
   if ('duration_sec' in b) patch.duration_sec = optInt(b.duration_sec);
   if ('isLive' in b) patch.payload = { ...db.getItem(id).payload, isLive: !!b.isLive };
+  if ('start' in b) {
+    if (!START_TYPES.has(db.getItem(id).type)) throw bad('This item has no start time.');
+    const raw = String(b.start ?? '').trim();
+    const start = parseTime(raw);
+    if (raw && !start && !/^[0:]+s?$/.test(raw)) throw bad('Start time should look like 90, 1:30 or 1m30s.');
+    patch.payload = { ...(patch.payload ?? db.getItem(id).payload), start };
+  }
   const item = db.updateItem(id, patch);
   changed();
   return item;

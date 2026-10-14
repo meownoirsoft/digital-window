@@ -43,6 +43,12 @@ document.querySelectorAll('[role=tab]').forEach((tab) => {
 });
 
 // --- Playlist rendering -------------------------------------------------------
+// 90 -> "1:30", 3723 -> "1:02:03"
+function clock(sec) {
+  const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = String(sec % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+}
+
 function thumbFor(item) {
   return item.payload?.thumb ?? null;
 }
@@ -69,6 +75,15 @@ function render() {
     if (item.error) {
       $('.error', li).hidden = false;
       $('.error', li).textContent = `⚠ Skipped: ${item.error}`;
+    }
+
+    const start = $('.start', li);
+    const seekable = item.type === 'nasa_video' || (item.type === 'youtube' && !item.payload?.isLive && !item.payload?.channelId);
+    start.hidden = !seekable;
+    if (seekable) {
+      const input = $('input', start);
+      input.value = item.payload?.start ? clock(item.payload.start) : '';
+      input.addEventListener('change', () => patch(item.id, { start: input.value }));
     }
 
     const dur = $('.dur input', li);

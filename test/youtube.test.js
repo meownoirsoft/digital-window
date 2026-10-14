@@ -35,6 +35,9 @@ test('start times', () => {
   assert.equal(parseYouTube(`https://www.youtube.com/embed/${ID}?start=15`).start, 15);
   assert.equal(parseTime('1h2m3s'), 3723);
   assert.equal(parseTime('garbage'), 0);
+  assert.equal(parseTime('1:30'), 90);
+  assert.equal(parseTime('1:02:03'), 3723);
+  assert.equal(parseTime('1:2:3:4'), 0);
 });
 
 test('rejects junk', () => {

@@ -214,10 +214,10 @@ function mountImage(layer, url, seconds, captionText) {
   return slot;
 }
 
-function mountVideo(layer, url, maxSec, captionText) {
+function mountVideo(layer, url, maxSec, captionText, start = 0) {
   const slot = makeSlot();
   const v = document.createElement('video');
-  Object.assign(v, { muted: true, autoplay: true, playsInline: true, preload: 'auto', src: url });
+  Object.assign(v, { muted: true, autoplay: true, playsInline: true, preload: 'auto', src: start ? `${url}#t=${start}` : url });
   v.setAttribute('muted', '');
   layer.append(v);
   caption(layer, captionText);
@@ -289,7 +289,7 @@ async function mount(item, layer) {
     case 'nasa_image':
       return mountImage(layer, p.url, still, item.title);
     case 'nasa_video':
-      return mountVideo(layer, p.url, max, item.title);
+      return mountVideo(layer, p.url, max, item.title, p.start);
     case 'apod': {
       const a = await api('/api/resolve/apod');
       if (a.kind === 'youtube') return mountYouTube(layer, { videoId: a.videoId, start: a.start }, max, live);
