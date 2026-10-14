@@ -104,6 +104,7 @@ Uninstall removes the managed policy file but keeps the kiosk profile.
 | "An app wants to access camera devices" dialog on the TV | Choose **Deny**. The app never uses a camera. Re-run the install command (option B) and reboot; the update turns off Chromium's camera access so the dialog doesn't come back. |
 | Chromium pop-ups over the player ("Fix those tabs", what's new, sign in, translate…) | Re-run the install command (option B) and reboot. The kiosk browser uses its own clean profile, and promotions and nags are turned off. |
 | Video is choppy | Update (re-run the option B command) and reboot to get H.264 video. If it's still choppy, set `KIOSK_RESOLUTION=3840x2160@30Hz` (or `1920x1080`) in `~/digital-window/.env` and reboot, and use Ethernet if Wi-Fi is weak. |
+| Mouse pointer visible on the player | Update and reboot. The kiosk moves the pointer into the bottom-right corner, which makes Chromium hide it. This needs `wlrctl`, which is available on Raspberry Pi OS Trixie. On Bookworm, nudge the mouse once (or unplug it) and the pointer disappears. |
 | Screen goes black after a while | Run `sudo raspi-config` → Display Options → Screen Blanking → No. |
 
 ---

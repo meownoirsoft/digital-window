@@ -20,7 +20,23 @@ chmod 0700 "$PROFILE" || exit 1
 # Wait for the server to come up.
 until curl -fsS -o /dev/null "$URL"; do sleep 2; done
 
-# Hide the mouse pointer if unclutter is installed (X11) — Wayland/labwc hides it via CSS.
+# Hide the mouse pointer. The player page sets `cursor: none`, but the browser
+# only applies that once the pointer moves over the page, so after Chromium
+# opens we push the pointer to the bottom-right corner. That movement makes
+# Chromium hide it entirely; at worst a single pixel is left in the corner.
+park_cursor() {
+  if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wlrctl >/dev/null; then
+    wlrctl pointer move 100000 100000
+  elif [ -n "${DISPLAY:-}" ] && command -v xdotool >/dev/null; then
+    xdotool mousemove 100000 100000
+  fi
+}
+(
+  # A few times while Chromium starts and the page loads, then every few
+  # minutes so it stays hidden after the player's daily reload.
+  for delay in 5 10 20 30; do sleep "$delay"; park_cursor; done
+  while sleep 300; do park_cursor; done
+) >/dev/null 2>&1 &
 command -v unclutter >/dev/null && unclutter -idle 0.5 -root &
 
 if [ "$RES" != auto ]; then

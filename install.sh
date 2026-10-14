@@ -190,7 +190,11 @@ if [ "$KIOSK" = 1 ]; then
   fi
   has unclutter || pkg install -y -qq unclutter 2>/dev/null || true
   # Used by the kiosk to set the screen to KIOSK_RESOLUTION on Wayland desktops.
-  if has labwc || has wayfire; then has wlr-randr || pkg install -y -qq wlr-randr 2>/dev/null || true; fi
+  # wlrctl parks the mouse pointer in the corner so it's hidden.
+  if has labwc || has wayfire; then
+    has wlr-randr || pkg install -y -qq wlr-randr 2>/dev/null || true
+    has wlrctl || pkg install -y -qq wlrctl 2>/dev/null || warn "wlrctl isn't available (Bookworm); the mouse pointer hides once the mouse is moved"
+  fi
 
   # Keep pop-ups off the screen: no camera/mic/location/notification prompts, and
   # no promotions, feature tours, sign-in, sync, translate or password nags.
