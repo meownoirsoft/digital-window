@@ -2,14 +2,14 @@
 # Digital Window installer / updater for Raspberry Pi OS (Bookworm or newer).
 # Safe to re-run: it updates the app and leaves .env and data/ alone.
 #
-#   From GitHub:       curl -fsSL https://raw.githubusercontent.com/meownoirsoft/digital-window/main/install.sh | bash
+#   From GitHub:       curl -fsSL https://raw.githubusercontent.com/meownoirsoft/lumi/main/install.sh | bash
 #   From a release:    tar xzf digital-window-*.tar.gz && ./digital-window/install.sh
 #   From a checkout:   ./install.sh
 #
 # Options (env vars or flags):
 #   --no-kiosk          server only; don't touch the desktop / browser autostart
 #   --uninstall         stop the service and remove autostart entries (keeps files)
-#   REPO_URL=...        git URL to clone (default: the meownoirsoft/digital-window repo)
+#   REPO_URL=...        git URL to clone (default: the meownoirsoft/lumi repo)
 #   INSTALL_DIR=...     where to clone (default ~/digital-window)
 #   NASA_API_KEY=...    written to .env on first install (otherwise you're asked)
 #   PORT=3000           written to .env on first install
@@ -98,7 +98,7 @@ else
     say "Updating $APP_DIR"
     git -C "$APP_DIR" pull --ff-only
   else
-    REPO_URL=${REPO_URL:-https://github.com/meownoirsoft/digital-window.git}
+    REPO_URL=${REPO_URL:-https://github.com/meownoirsoft/lumi.git}
     has git || { pkg update -qq && pkg install -y -qq git; }
     say "Cloning $REPO_URL into $APP_DIR"
     git clone --depth 1 "$REPO_URL" "$APP_DIR"

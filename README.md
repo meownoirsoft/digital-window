@@ -40,7 +40,7 @@ If the player doesn't appear, the install log is at `/var/log/digital-window-ins
 Works on 64-bit Raspberry Pi OS **with the desktop**, Bookworm or newer. Open a terminal on the Pi, or SSH in, as your normal user (not root), and run the command below. It asks for your password once, for the steps that need `sudo`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/meownoirsoft/digital-window/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/meownoirsoft/lumi/main/install.sh | bash
 sudo reboot
 ```
 
@@ -51,7 +51,7 @@ It asks for a NASA API key; press Enter to use the rate-limited demo key. After 
 On any computer with Node 22.13+ and git:
 
 ```bash
-git clone https://github.com/meownoirsoft/digital-window.git && cd digital-window
+git clone https://github.com/meownoirsoft/lumi.git && cd lumi
 npm install && npm run pack                   # → dist/digital-window-<version>.tar.gz
 scp dist/digital-window-*.tar.gz <user>@<pi-ip>:~
 ssh <user>@<pi-ip> 'tar xzf digital-window-*.tar.gz && ./digital-window/install.sh && sudo reboot'
@@ -146,7 +146,7 @@ Embedding-disabled videos are also caught when you add them, through YouTube's o
 ## Run it on any computer
 
 ```bash
-git clone https://github.com/meownoirsoft/digital-window.git && cd digital-window
+git clone https://github.com/meownoirsoft/lumi.git && cd lumi
 npm install
 cp .env.example .env      # optional: add a free NASA_API_KEY from https://api.nasa.gov
 npm start                 # admin: http://localhost:3000/admin  · player: http://localhost:3000/player

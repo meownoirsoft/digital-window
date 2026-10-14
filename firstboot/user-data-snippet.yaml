@@ -27,7 +27,7 @@ runcmd:
       # password. Allow it without one only while the install runs.
       rule=/etc/sudoers.d/zz-digital-window-install
       echo "$u ALL=(ALL) NOPASSWD:ALL" > "$rule" && chmod 0440 "$rule"
-      su - "$u" -c "curl -fsSL https://raw.githubusercontent.com/meownoirsoft/digital-window/main/install.sh | NASA_API_KEY=$NASA_KEY bash" \
+      su - "$u" -c "curl -fsSL https://raw.githubusercontent.com/meownoirsoft/lumi/main/install.sh | NASA_API_KEY=$NASA_KEY bash" \
         > /var/log/digital-window-install.log 2>&1
       rm -f "$rule"
 
