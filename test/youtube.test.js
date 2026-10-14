@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseYouTube, parseTime } from '../lib/youtube.js';
+import { parseYouTube, parseTime, parsePlaylist } from '../lib/youtube.js';
 
 const ID = 'dQw4w9WgXcQ';
 
@@ -40,5 +40,21 @@ test('start times', () => {
 test('rejects junk', () => {
   for (const c of ['', null, 'hello', 'https://vimeo.com/123', `https://evil.com/watch?v=${ID}`, 'https://youtu.be/short', 'https://www.youtube.com/@channel']) {
     assert.equal(parseYouTube(c), null, String(c));
+  }
+});
+
+test('playlists', () => {
+  const PL = 'PLx0sYbCqOb8TBPRdmBHs5Iftvv9TPboYG';
+  assert.deepEqual(parsePlaylist(`https://www.youtube.com/playlist?list=${PL}`), { listId: PL, isMix: false });
+  assert.deepEqual(parsePlaylist(`youtube.com/playlist?list=${PL}&si=abc`), { listId: PL, isMix: false });
+  assert.deepEqual(parsePlaylist(`https://m.youtube.com/playlist?list=${PL}`), { listId: PL, isMix: false });
+  assert.deepEqual(parsePlaylist(`https://www.youtube.com/embed/videoseries?list=${PL}`), { listId: PL, isMix: false });
+  assert.deepEqual(parsePlaylist(PL), { listId: PL, isMix: false });
+  assert.equal(parsePlaylist('https://www.youtube.com/playlist?list=RDdQw4w9WgXcQ').isMix, true);
+  // A video played from a playlist stays a single video.
+  assert.equal(parsePlaylist(`https://www.youtube.com/watch?v=${ID}&list=${PL}`), null);
+  assert.equal(parseYouTube(`https://www.youtube.com/watch?v=${ID}&list=${PL}`).videoId, ID);
+  for (const c of ['', ID, 'https://www.youtube.com/playlist', 'https://evil.com/playlist?list=' + PL, 'https://www.youtube.com/playlist?list=nope']) {
+    assert.equal(parsePlaylist(c), null, c);
   }
 });

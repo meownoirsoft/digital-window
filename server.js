@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openDb } from './db.js';
-import { parseYouTube } from './lib/youtube.js';
+import { parseYouTube, parsePlaylist } from './lib/youtube.js';
 import { searchLibrary, resolveAsset, resolveApod, resolveEpic, resolveChannelLive } from './lib/nasa.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -67,6 +67,22 @@ async function youtubeMeta(videoId) {
   return res.json();
 }
 
+// Title/thumbnail via oEmbed, plus the video count from the playlist page
+// (best effort; it's only shown in the admin list).
+async function playlistMeta(listId) {
+  const page = `https://www.youtube.com/playlist?list=${listId}`;
+  const res = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(page)}`, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) throw Object.assign(new Error('Playlist not found, or it is private.'), { statusCode: 422 });
+  const meta = await res.json();
+  let count = null;
+  try {
+    const html = await fetch(page, { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'en' }, signal: AbortSignal.timeout(10000) }).then((r) => r.text());
+    const m = /"stats":\[\{"runs":\[\{"text":"([\d,]+)"\},\{"text":" videos?"/.exec(html);
+    if (m) count = Number(m[1].replace(/,/g, ''));
+  } catch { /* count is optional */ }
+  return { ...meta, count };
+}
+
 const bad = (msg) => Object.assign(new Error(msg), { statusCode: 400 });
 const optInt = (v) => (v === undefined || v === null || v === '' ? null : Math.max(1, parseInt(v, 10) || 0) || null);
 
@@ -75,9 +91,20 @@ app.post('/api/items', async (req) => {
   const kind = b.kind ?? 'youtube';
   let item;
 
-  if (kind === 'youtube') {
+  const pl = kind === 'youtube' ? parsePlaylist(b.input) : null;
+  if (pl) {
+    if (pl.isMix) throw bad("That's a YouTube Mix, which is generated per viewer and can't be embedded. Use a regular playlist link (youtube.com/playlist?list=PL…).");
+    const meta = await playlistMeta(pl.listId);
+    item = db.addItem({
+      type: 'youtube_playlist',
+      title: meta.title,
+      source: [meta.author_name, meta.count != null && `${meta.count} video${meta.count === 1 ? '' : 's'}`].filter(Boolean).join(' · ') || 'YouTube',
+      payload: { listId: pl.listId, count: meta.count, thumb: meta.thumbnail_url },
+      duration_sec: optInt(b.duration_sec),
+    });
+  } else if (kind === 'youtube') {
     const yt = parseYouTube(b.input);
-    if (!yt) throw bad("That doesn't look like a YouTube URL or 11-character video ID.");
+    if (!yt) throw bad("That doesn't look like a YouTube video or playlist link, or an 11-character video ID.");
     const meta = await youtubeMeta(yt.videoId);
     const isLive = yt.isLive || !!b.isLive;
     item = db.addItem({

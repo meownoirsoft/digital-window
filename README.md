@@ -2,7 +2,7 @@
 
 Turn a Raspberry Pi and any TV or monitor into a "window" that plays a playlist of **YouTube videos** and **NASA space imagery** in order, on a loop. Everything streams; nothing is downloaded.
 
-- **Admin page**, from your phone or laptop: paste a YouTube link, search NASA's image and video library, add feeds (Astronomy Picture of the Day, live Earth photos, NASA live streams), and drag to reorder.
+- **Admin page**, from your phone or laptop: paste a YouTube video or playlist link, search NASA's image and video library, add feeds (Astronomy Picture of the Day, live Earth photos, NASA live streams), and drag to reorder.
 - **Player**: runs fullscreen on the Pi. Your edits show up within a second.
 
 ---
@@ -113,6 +113,7 @@ Uninstall removes the managed policy file but keeps the kiosk profile.
 | Type | Plays for |
 |---|---|
 | YouTube video | its full length (or the per-item seconds, if set) |
+| YouTube playlist | every video in it, first to last, then on to your next item (or the per-item seconds, if set) |
 | YouTube live / NASA live preset | *Live stream duration* setting (default 30 min) |
 | NASA image, APOD still | *Still image duration* (default 30 s), with a slow Ken Burns pan |
 | NASA video, APOD video | its full length |

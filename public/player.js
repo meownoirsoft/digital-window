@@ -99,7 +99,9 @@ const YT_ERRORS = {
   153: 'Missing referrer — open the player over http(s), not file://',
 };
 
-async function mountYouTube(layer, { videoId, channelId, start = 0, isLive }, maxSec, liveSec) {
+// One video, a channel's current live stream (channelId), or a whole playlist
+// (listId) played first to last before moving on.
+async function mountYouTube(layer, { videoId, channelId, listId, start = 0, isLive }, maxSec, liveSec) {
   const YT = await loadYouTubeApi();
   const slot = makeSlot();
 
@@ -112,6 +114,7 @@ async function mountYouTube(layer, { videoId, channelId, start = 0, isLive }, ma
   });
   if (start) params.set('start', String(start));
   if (channelId) videoId = (await api(`/api/resolve/channel-live/${channelId}`)).videoId;
+  if (listId) { videoId = 'videoseries'; params.set('list', listId); }
 
   const iframe = document.createElement('iframe');
   iframe.src = `https://www.youtube.com/embed/${videoId}?${params}`;
@@ -126,10 +129,14 @@ async function mountYouTube(layer, { videoId, channelId, start = 0, isLive }, ma
         onReady: (e) => { e.target.mute(); e.target.playVideo(); },
         onStateChange: (e) => {
           if (e.data === YT.PlayerState.PLAYING) resolve();
-          if (e.data === YT.PlayerState.ENDED) slot.finish();
+          if (e.data === YT.PlayerState.ENDED && !(listId && playNextInList())) slot.finish();
         },
         onError: (e) => {
           const err = new Error(YT_ERRORS[e.data] || `YouTube error ${e.data}`);
+          if (listId && playNextInList()) {
+            console.warn('[window] playlist: skipping a video:', err.message);
+            return;
+          }
           reject(err);
           slot.fail(err);
         },
@@ -138,8 +145,17 @@ async function mountYouTube(layer, { videoId, channelId, start = 0, isLive }, ma
   });
   slot.onDestroy(() => { player?.destroy?.(); iframe.remove(); });
 
+  // Move to the next video in the playlist; false once the last one is done.
+  function playNextInList() {
+    const i = player.getPlaylistIndex?.() ?? -1;
+    const n = player.getPlaylist?.()?.length ?? 0;
+    if (i < 0 || i >= n - 1) return false;
+    player.playVideoAt(i + 1);
+    return true;
+  }
+
   slot.ready = ready.then(() => {
-    const live = isLive || channelId || player.getDuration?.() === 0;
+    const live = !listId && (isLive || channelId || player.getDuration?.() === 0);
     const cap = live ? (maxSec || liveSec) : maxSec;
     if (cap) timer(slot, cap);
     stallWatch(slot, () => player.getCurrentTime?.());
@@ -229,6 +245,7 @@ async function mount(item, layer) {
 
   switch (item.type) {
     case 'youtube':
+    case 'youtube_playlist':
       return mountYouTube(layer, p, max, live);
     case 'nasa_image':
       return mountImage(layer, p.url, still, item.title);

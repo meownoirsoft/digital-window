@@ -22,11 +22,12 @@
 
       <div class="tab" data-panel="yt">
         <form id="yt-form" class="row">
-          <input id="yt-input" type="text" placeholder="Paste a YouTube URL or 11-character video ID" autocomplete="off" required>
+          <input id="yt-input" type="text" placeholder="Paste a YouTube video or playlist link, or a video ID" autocomplete="off" required>
           <label class="check"><input id="yt-live" type="checkbox"> Live stream</label>
           <button class="btn" type="submit">Add</button>
         </form>
-        <p class="hint">Accepts watch, youtu.be, Shorts, /live/ and /embed/ links. A <code>?t=</code> start time is kept.</p>
+        <p class="hint">Videos: watch, youtu.be, Shorts, /live/ and /embed/ links (a <code>?t=</code> start time is kept).
+          Playlists: paste the playlist's own link (<code>youtube.com/playlist?list=…</code>); it plays every video in order as one item.</p>
       </div>
 
       <div class="tab" data-panel="lib" hidden>

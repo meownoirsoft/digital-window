@@ -8,7 +8,7 @@ let nowPlayingId = null;
 let dragging = false;
 
 const TYPE_LABEL = {
-  youtube: 'YouTube', nasa_image: 'NASA image', nasa_video: 'NASA video', apod: 'APOD', epic: 'EPIC',
+  youtube: 'YouTube', youtube_playlist: 'YouTube playlist', nasa_image: 'NASA image', nasa_video: 'NASA video', apod: 'APOD', epic: 'EPIC',
 };
 
 async function api(path, { method = 'GET', body } = {}) {
