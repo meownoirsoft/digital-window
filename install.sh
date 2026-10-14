@@ -145,7 +145,8 @@ if [ ! -f .env ]; then
     printf 'NASA API key (free at https://api.nasa.gov; Enter = DEMO_KEY): ' > /dev/tty
     read -r -t 300 key < /dev/tty || true
   fi
-  printf 'NASA_API_KEY=%s\nPORT=%s\n' "${key:-DEMO_KEY}" "${PORT:-3000}" > .env
+  { printf 'NASA_API_KEY=%s\nPORT=%s\n' "${key:-DEMO_KEY}" "${PORT:-3000}"
+    sed -n '/^# Kiosk/,$p' .env.example; } > .env
   say "Wrote .env"
 fi
 APP_PORT=$(sed -n 's/^PORT=//p' .env | tail -1)
@@ -188,6 +189,8 @@ if [ "$KIOSK" = 1 ]; then
     pkg install -y -qq chromium-browser 2>/dev/null || pkg install -y -qq chromium
   fi
   has unclutter || pkg install -y -qq unclutter 2>/dev/null || true
+  # Used by the kiosk to set the screen to KIOSK_RESOLUTION on Wayland desktops.
+  if has labwc || has wayfire; then has wlr-randr || pkg install -y -qq wlr-randr 2>/dev/null || true; fi
 
   # Keep pop-ups off the screen: no camera/mic/location/notification prompts, and
   # no promotions, feature tours, sign-in, sync, translate or password nags.

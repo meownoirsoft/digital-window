@@ -85,6 +85,7 @@ The bundle already contains its dependencies. The Pi still needs internet access
 | APOD or EPIC fails sometimes | NASA rate-limits `DEMO_KEY`. Put your own key in `~/digital-window/.env` (`NASA_API_KEY=…`), then `sudo systemctl restart digital-window`. |
 | "An app wants to access camera devices" dialog on the TV | Choose **Deny**. The app never uses a camera. Re-run the install command (option B) and reboot; the update turns off Chromium's camera access so the dialog doesn't come back. |
 | Chromium pop-ups over the player ("Fix those tabs", what's new, sign in, translate…) | Re-run the install command (option B) and reboot. The kiosk browser uses its own clean profile, and promotions and nags are turned off. |
+| Video is choppy | Update (re-run the option B command) and reboot to get H.264 video. If it's still choppy, set `KIOSK_RESOLUTION=3840x2160@30Hz` (or `1920x1080`) in `~/digital-window/.env` and reboot, and use Ethernet if Wi-Fi is weak. |
 | Screen goes black after a while | Run `sudo raspi-config` → Display Options → Screen Blanking → No. |
 
 ---
@@ -101,8 +102,14 @@ The bundle already contains its dependencies. The Pi still needs internet access
 
 APOD (Astronomy Picture of the Day) is re-checked each time it comes round, so it changes daily. The "NASA — whatever is live now" preset plays whatever is currently live on NASA's YouTube channel and is skipped when nothing is. To add other channels, edit `presets.json` (any `UC…` channel ID).
 
+### 4K and smooth video on a Pi
+
+- **The screen stays at your TV's resolution, for example 4K.** NASA stills and APOD pictures are shown at full sharpness.
+- **YouTube plays as H.264.** The kiosk loads a small built-in extension ([`kiosk/h264-extension`](kiosk/h264-extension)) that makes YouTube send H.264 instead of VP9 or AV1. A Pi 5 has no hardware decoder for those formats, and decoding 4K VP9 or AV1 on its CPU is what makes video choppy. YouTube's H.264 goes up to **1080p**, which is scaled up to the 4K screen. True 4K YouTube needs a device with hardware VP9/AV1 decoding.
+- **Still choppy?** Set `KIOSK_RESOLUTION` in `~/digital-window/.env` and reboot. `3840x2160@30Hz` is 4K with half the redraw work; `1920x1080` is the smoothest.
+- **More powerful hardware** (for example a mini PC that can decode VP9/AV1): set `KIOSK_H264=0` to let YouTube send 4K.
+
 Tips:
-- Set the display to 1920×1080 rather than 4K (in the desktop's display settings). It's smoother, and YouTube picks a matching quality.
 - The player reloads itself once a day to keep a long-running browser healthy.
 - On a computer, press → in the player to skip and `r` to reload.
 

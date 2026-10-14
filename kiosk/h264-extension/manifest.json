@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Digital Window: prefer H.264",
+  "version": "1.0",
+  "description": "Makes YouTube stream H.264 instead of VP9/AV1, which a Raspberry Pi decodes far more smoothly.",
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*", "*://*.youtube-nocookie.com/*"],
+      "js": ["prefer-h264.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    }
+  ]
+}
