@@ -40,6 +40,21 @@ pkg()  { sudo DEBIAN_FRONTEND=noninteractive apt-get -o Dpkg::Use-Pty=0 "$@"; }
 [ "$(id -u)" -ne 0 ] || die "Run this as your normal desktop user (it uses sudo where needed), not as root."
 has sudo || die "sudo is required."
 
+# Get sudo working up front rather than failing halfway through. With a terminal
+# we ask for the password once and keep it fresh; without one (cloud-init,
+# piped from a script) we can't ask, so stop with a clear message.
+if ! sudo -n true 2>/dev/null; then
+  if { : </dev/tty; } 2>/dev/null; then
+    say "Some steps need administrator rights. Enter your password if asked."
+    sudo -v </dev/tty || die "sudo failed."
+    while kill -0 $$ 2>/dev/null; do sudo -n true 2>/dev/null; sleep 50; done &
+  else
+    die "sudo needs a password and there's no terminal to type it into.
+       Run the installer from a terminal on the Pi (or over SSH), or for a first-boot
+       install use the latest firstboot/user-data-snippet.yaml from the repo."
+  fi
+fi
+
 RUN_USER=$(id -un)
 HOME_DIR=$HOME
 LABWC_AUTOSTART="$HOME_DIR/.config/labwc/autostart"

@@ -37,7 +37,7 @@ If the player doesn't appear, the install log is at `/var/log/digital-window-ins
 
 ### B. One command on a Pi that's already running
 
-Works on 64-bit Raspberry Pi OS **with the desktop**, Bookworm or newer. Open a terminal on the Pi, or SSH in, as your normal user (not root), and run:
+Works on 64-bit Raspberry Pi OS **with the desktop**, Bookworm or newer. Open a terminal on the Pi, or SSH in, as your normal user (not root), and run the command below. It asks for your password once, for the steps that need `sudo`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/meownoirsoft/digital-window/main/install.sh | bash
@@ -77,6 +77,7 @@ The bundle already contains its dependencies. The Pi still needs internet access
 
 | Problem | Try |
 |---|---|
+| Install log says "sudo needs a password and there's no terminal" | Your SD card has an older copy of the first-boot snippet. Run the option B command in a terminal on the Pi (it asks for your password), or re-flash using the current [`firstboot/user-data-snippet.yaml`](firstboot/user-data-snippet.yaml). |
 | Option A: nothing happened after 10+ minutes | SSH in (or plug in a keyboard) and run `cat /var/log/digital-window-install.log`. The most common cause is no network: check the Wi-Fi name, password and country in Imager. |
 | Can't open the admin page | `systemctl status digital-window` and `journalctl -u digital-window -n 50` on the Pi. Make sure your phone or laptop is on the same network. |
 | Desktop shows but no player | Check the autostart entry: `grep digital ~/.config/labwc/autostart`. You can start the player by hand with `~/digital-window/kiosk/chromium-kiosk.sh`. |
