@@ -13,7 +13,30 @@ const RELOAD_AFTER_MS = 24 * 60 * 60 * 1000;
 
 const layers = [document.getElementById('layer-a'), document.getElementById('layer-b')];
 const idle = document.getElementById('idle');
-document.getElementById('admin-url').textContent = `${location.origin}/admin`;
+
+// Idle screen: show where to reach the admin page from a phone, as text and a
+// QR code. Looked up each time, since the Pi's IP address can change.
+async function showIdleInfo() {
+  let urls = [`${location.origin}/admin`];
+  try {
+    const info = await api('/api/info');
+    if (info.adminUrls?.length) urls = info.adminUrls;
+  } catch { /* offline: fall back to this page's own address */ }
+  const qrBox = document.getElementById('idle-qr');
+  if (window.qrcode) {
+    const qr = window.qrcode(0, 'M');
+    qr.addData(urls[0]);
+    qr.make();
+    qrBox.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+  }
+  // The first address (what the QR opens) plus the hostname.local one, if different.
+  const shown = urls.length > 1 ? [urls[0], urls[urls.length - 1]] : urls;
+  document.getElementById('idle-urls').replaceChildren(...shown.map((u) => {
+    const span = document.createElement('span');
+    span.textContent = u.replace(/^http:\/\//, '');
+    return span;
+  }));
+}
 
 let playlist = [];
 let settings = {};
@@ -338,6 +361,7 @@ async function advance() {
       current?.slot.destroy();
       current = null;
       layers.forEach((l) => { l.classList.remove('show'); l.replaceChildren(); });
+      if (idle.hidden) showIdleInfo();
       idle.hidden = false;
       return scheduleRetry(RETRY_MS);
     }

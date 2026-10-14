@@ -13,8 +13,11 @@
   <div class="layer" id="layer-b"></div>
   <div id="idle" hidden>
     <p class="idle-title">Digital Window</p>
-    <p class="idle-sub">Playlist is empty — add something at <span id="admin-url"></span></p>
+    <p class="idle-sub">The playlist is empty. Scan to add videos and space imagery:</p>
+    <div id="idle-qr" class="idle-qr"></div>
+    <p id="idle-urls" class="idle-urls"></p>
   </div>
+  <script src="/vendor/qrcode.js"></script>
   <script src="/player.js" type="module"></script>
 </body>
 </html>

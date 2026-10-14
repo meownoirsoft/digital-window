@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { readFileSync } from 'node:fs';
+import { hostname, networkInterfaces } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openDb } from './db.js';
@@ -74,6 +75,22 @@ app.post('/api/player-status', async (req) => {
 app.get('/', (req, reply) => reply.redirect('/admin'));
 app.get('/admin', (req, reply) => reply.sendFile('admin.html'));
 app.get('/player', (req, reply) => reply.sendFile('player.html'));
+
+// --- Device info (shown on the player's idle screen) ----------------------------
+// Addresses other devices on the network can use to reach the admin page.
+app.get('/api/info', () => {
+  const ips = Object.entries(networkInterfaces())
+    .filter(([name]) => !/^(lo|docker|br-|veth|virbr|tun|tailscale|zt)/.test(name))
+    .flatMap(([, addrs]) => addrs ?? [])
+    .filter((a) => a.family === 'IPv4' && !a.internal)
+    .map((a) => a.address);
+  const host = hostname();
+  return {
+    hostname: host,
+    port: PORT,
+    adminUrls: [...ips.map((ip) => `http://${ip}:${PORT}/admin`), `http://${host}.local:${PORT}/admin`],
+  };
+});
 
 // --- Items --------------------------------------------------------------------
 app.get('/api/items', () => db.listItems());

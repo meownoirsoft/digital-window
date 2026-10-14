@@ -71,4 +71,18 @@ html, body {
 }
 #idle[hidden] { display: none; }
 .idle-title { font-size: 4vw; margin: 0; letter-spacing: .05em; }
-.idle-sub { font-size: 1.4vw; opacity: .7; }
+.idle-sub { font-size: 1.6vw; opacity: .75; margin: 1.5vh 0 3vh; }
+.idle-qr {
+  justify-self: center;
+  width: min(22vw, 36vh);
+  aspect-ratio: 1;
+  padding: 1.2vw;
+  background: #fff;
+  border-radius: 1vw;
+  box-sizing: border-box;
+}
+.idle-qr:empty { display: none; }
+.idle-qr svg { display: block; width: 100%; height: 100%; }
+.idle-urls { font-size: 1.5vw; line-height: 1.6; margin-top: 3vh; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.idle-urls span { display: block; }
+.idle-urls span + span { opacity: .6; font-size: .85em; }
