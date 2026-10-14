@@ -189,8 +189,8 @@ if [ "$KIOSK" = 1 ]; then
   fi
   has unclutter || pkg install -y -qq unclutter 2>/dev/null || true
 
-  # The display never needs a camera or mic. Turning them off in Chromium stops
-  # the desktop's "Allow app to use camera" dialog from popping up over the player.
+  # Keep pop-ups off the screen: no camera/mic/location/notification prompts, and
+  # no promotions, feature tours, sign-in, sync, translate or password nags.
   # (This applies to Chromium on this Pi generally; --uninstall removes it.)
   sudo mkdir -p "$(dirname "$CHROMIUM_POLICY")"
   sudo tee "$CHROMIUM_POLICY" >/dev/null <<'EOF'
@@ -198,7 +198,15 @@ if [ "$KIOSK" = 1 ]; then
   "VideoCaptureAllowed": false,
   "AudioCaptureAllowed": false,
   "DefaultGeolocationSetting": 2,
-  "DefaultNotificationsSetting": 2
+  "DefaultNotificationsSetting": 2,
+  "PromotionsEnabled": false,
+  "BrowserSignin": 0,
+  "SyncDisabled": true,
+  "DefaultBrowserSettingEnabled": false,
+  "TranslateEnabled": false,
+  "PasswordManagerEnabled": false,
+  "MetricsReportingEnabled": false,
+  "TabOrganizerSettings": 2
 }
 EOF
 

@@ -84,6 +84,7 @@ The bundle already contains its dependencies. The Pi still needs internet access
 | A video is skipped with ⚠ in the admin page | The owner disabled embedding, or the video is private, removed or region-blocked. This can't be worked around; pick another video. |
 | APOD or EPIC fails sometimes | NASA rate-limits `DEMO_KEY`. Put your own key in `~/digital-window/.env` (`NASA_API_KEY=…`), then `sudo systemctl restart digital-window`. |
 | "An app wants to access camera devices" dialog on the TV | Choose **Deny**. The app never uses a camera. Re-run the install command (option B) and reboot; the update turns off Chromium's camera access so the dialog doesn't come back. |
+| Chromium pop-ups over the player ("Fix those tabs", what's new, sign in, translate…) | Re-run the install command (option B) and reboot. The kiosk browser uses its own clean profile, and promotions and nags are turned off. |
 | Screen goes black after a while | Run `sudo raspi-config` → Display Options → Screen Blanking → No. |
 
 ---
