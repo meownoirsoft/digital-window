@@ -66,12 +66,30 @@ The bundle already contains its dependencies. The Pi still needs internet access
 3. Creates a `digital-window` system service that starts on boot and restarts if it crashes.
 4. Adds the fullscreen Chromium player to the desktop's autostart (labwc, Wayfire or X11).
 5. Turns off screen blanking and sets the Pi to boot to the desktop logged in. Set `SKIP_AUTOLOGIN=1` to leave boot settings alone.
+6. Installs `kiosk/chromium-policy.json` as the root-owned managed policy file `/etc/chromium/policies/managed/digital-window.json`.
+
+### Chromium policies and profile
+
+The policy file keeps promotions, sign-in/sync, permission prompts, and other
+browser nags off the player. These machine-wide policies also affect Chromium
+outside the kiosk. Camera/microphone capture is blocked, but video playback and
+speaker audio remain allowed. After restarting Chromium, check `chrome://policy`
+for policy values and status.
+
+The kiosk uses a private profile at `~/.config/digital-window-chromium`
+(or `$XDG_CONFIG_HOME/digital-window-chromium` when set), with owner-only access.
+Chromium creates it on first launch; updates retain it without copying cookies
+or preferences from your normal browser. Profile setup and policies belong in
+the repo, but runtime cookies, history, and credentials stay outside Git.
 
 ### Updating and removing
 
 - **Update:** run the option B command again. It keeps your playlist (`data/`) and `.env`.
 - **Server only, no fullscreen player** (for example a headless Pi that another screen points at): add `--no-kiosk`, as in `... | bash -s -- --no-kiosk`.
 - **Remove:** `~/digital-window/install.sh --uninstall`, then delete `~/digital-window` if you don't want the files or playlist.
+
+Uninstall removes the managed policy file but keeps the kiosk profile.
+`--no-kiosk` leaves any previously installed policies unchanged.
 
 ### Troubleshooting
 

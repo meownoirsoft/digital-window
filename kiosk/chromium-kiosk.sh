@@ -13,8 +13,9 @@ H264=$(setting KIOSK_H264); H264=${H264:-1}
 
 # A profile used only by the kiosk: no saved tabs, sessions or sign-in from the
 # desktop browser, so Chromium has nothing to restore, sync or nag about.
-PROFILE="$HOME/.config/digital-window-chromium"
-mkdir -p "$PROFILE"
+PROFILE="${XDG_CONFIG_HOME:-$HOME/.config}/digital-window-chromium"
+mkdir -p -m 0700 "$PROFILE" || exit 1
+chmod 0700 "$PROFILE" || exit 1
 
 # Wait for the server to come up.
 until curl -fsS -o /dev/null "$URL"; do sleep 2; done

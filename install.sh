@@ -195,23 +195,7 @@ if [ "$KIOSK" = 1 ]; then
   # Keep pop-ups off the screen: no camera/mic/location/notification prompts, and
   # no promotions, feature tours, sign-in, sync, translate or password nags.
   # (This applies to Chromium on this Pi generally; --uninstall removes it.)
-  sudo mkdir -p "$(dirname "$CHROMIUM_POLICY")"
-  sudo tee "$CHROMIUM_POLICY" >/dev/null <<'EOF'
-{
-  "VideoCaptureAllowed": false,
-  "AudioCaptureAllowed": false,
-  "DefaultGeolocationSetting": 2,
-  "DefaultNotificationsSetting": 2,
-  "PromotionsEnabled": false,
-  "BrowserSignin": 0,
-  "SyncDisabled": true,
-  "DefaultBrowserSettingEnabled": false,
-  "TranslateEnabled": false,
-  "PasswordManagerEnabled": false,
-  "MetricsReportingEnabled": false,
-  "TabOrganizerSettings": 2
-}
-EOF
+  sudo install -D -o root -g root -m 0644 "$APP_DIR/kiosk/chromium-policy.json" "$CHROMIUM_POLICY"
 
   LAUNCH="$APP_DIR/kiosk/chromium-kiosk.sh http://localhost:$APP_PORT/player"
   chmod +x "$APP_DIR/kiosk/chromium-kiosk.sh"

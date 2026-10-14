@@ -1,0 +1,14 @@
+{
+  "VideoCaptureAllowed": false,
+  "AudioCaptureAllowed": false,
+  "DefaultGeolocationSetting": 2,
+  "DefaultNotificationsSetting": 2,
+  "PromotionsEnabled": false,
+  "BrowserSignin": 0,
+  "SyncDisabled": true,
+  "DefaultBrowserSettingEnabled": false,
+  "TranslateEnabled": false,
+  "PasswordManagerEnabled": false,
+  "MetricsReportingEnabled": false,
+  "TabOrganizerSettings": 2
+}
