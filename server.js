@@ -27,6 +27,11 @@ app.addHook('onSend', async (req, reply) => {
 // --- Server-Sent Events hub ---------------------------------------------------
 const clients = new Set();
 let nowPlaying = null;
+// Connected player pages: id -> { ip, visible }. Only a visible player's
+// reports count, so a forgotten tab or a covered window can't flag items.
+const players = new Map();
+const playerList = () => [...players.entries()].map(([id, p]) => ({ id, ...p }));
+const isHiddenPlayer = (id) => id != null && players.get(id)?.visible === false;
 
 function broadcast(event, data = {}) {
   const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -44,8 +49,25 @@ app.get('/api/events', (req, reply) => {
   });
   res.write(`event: now-playing\ndata: ${JSON.stringify(nowPlaying)}\n\n`);
   clients.add(res);
+  const playerId = typeof req.query.player === 'string' ? req.query.player.slice(0, 64) : null;
+  if (playerId) {
+    players.set(playerId, { ip: req.ip, visible: req.query.visible === '1' });
+    broadcast('players', playerList());
+  } else {
+    res.write(`event: players\ndata: ${JSON.stringify(playerList())}\n\n`);
+  }
   const ping = setInterval(() => res.write(': ping\n\n'), 25000);
-  req.raw.on('close', () => { clearInterval(ping); clients.delete(res); });
+  req.raw.on('close', () => {
+    clearInterval(ping);
+    clients.delete(res);
+    if (playerId && players.delete(playerId)) broadcast('players', playerList());
+  });
+});
+
+app.post('/api/player-status', async (req) => {
+  const p = players.get(String(req.body?.player ?? ''));
+  if (p) { p.visible = !!req.body.visible; broadcast('players', playerList()); }
+  return { ok: true };
 });
 
 // --- Pages --------------------------------------------------------------------
@@ -174,6 +196,7 @@ app.put('/api/items/order', async (req) => {
 
 // --- Player reporting ---------------------------------------------------------
 app.post('/api/now-playing', async (req) => {
+  if (isHiddenPlayer(req.body?.player)) return { ok: true, ignored: 'player not visible' };
   const id = Number(req.body?.id);
   nowPlaying = { id, at: Date.now() };
   const item = db.getItem(id);
@@ -183,6 +206,7 @@ app.post('/api/now-playing', async (req) => {
 });
 
 app.post('/api/items/:id/error', async (req) => {
+  if (isHiddenPlayer(req.body?.player)) return { ok: true, ignored: 'player not visible' };
   const id = Number(req.params.id);
   const item = db.getItem(id);
   const msg = String(req.body?.error ?? 'Playback failed').slice(0, 300);

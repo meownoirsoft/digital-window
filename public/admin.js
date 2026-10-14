@@ -213,6 +213,22 @@ const events = new EventSource('/api/events');
 events.addEventListener('playlist-changed', load);
 events.addEventListener('open', load);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+events.addEventListener('players', (e) => {
+  const list = JSON.parse(e.data) ?? [];
+  const onScreen = list.filter((p) => p.visible).length;
+  const el = $('#players');
+  el.classList.toggle('warn', list.length !== 1 || onScreen !== 1);
+  if (!list.length) {
+    el.textContent = '● No player connected';
+    el.title = 'Nothing is showing the playlist. Is the display on and the kiosk running?';
+  } else if (list.length === 1) {
+    el.textContent = onScreen ? '● Player on screen' : '● Player connected but not visible';
+    el.title = list[0].ip;
+  } else {
+    el.textContent = `● ${list.length} players open (${onScreen} on screen)`;
+    el.title = `Close /player in other tabs or devices: ${list.map((p) => `${p.ip}${p.visible ? '' : ' (hidden)'}`).join(', ')}`;
+  }
+});
 events.addEventListener('now-playing', (e) => {
   nowPlayingId = JSON.parse(e.data)?.id ?? null;
   render();

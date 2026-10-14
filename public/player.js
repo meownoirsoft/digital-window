@@ -22,6 +22,10 @@ let current = null;       // { item, slot }
 let lastIndex = -1;
 let busy = false;
 let failStreak = 0;
+// Identifies this player to the server, which shows connected players in the
+// admin page and ignores reports from players that aren't on screen.
+const PLAYER_ID = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const visible = () => document.visibilityState === 'visible';
 const hiccups = new Map();   // item id -> consecutive one-off failures
 let retryTimer = null;
 const bootedAt = Date.now();
@@ -41,7 +45,8 @@ async function api(path, opts) {
   return body;
 }
 const post = (path, body) => api(path, {
-  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ ...body, player: PLAYER_ID }),
 }).catch(() => {});
 
 // A deferred "ended" signal each mount resolves (finished) or rejects (failed).
@@ -307,6 +312,9 @@ function scheduleRetry(ms) {
 // Show a warning in the admin page only when it's worth acting on: problems
 // that won't fix themselves, or an item that keeps failing.
 function reportFailure(item, err) {
+  // A hidden tab or covered window can't start video, so its failures say
+  // nothing about the item; keep quiet and let the visible player report.
+  if (!visible()) return;
   if (err.permanent) {
     post(`/api/items/${item.id}/error`, { error: err.message });
     return;
@@ -363,7 +371,7 @@ async function advance() {
     current = { item, slot };
     setTimeout(() => { old?.destroy(); if (!oldLayer.classList.contains('show')) oldLayer.replaceChildren(); }, 1400);
 
-    post('/api/now-playing', { id: item.id });
+    if (visible()) post('/api/now-playing', { id: item.id });
     slot.ended.then(
       () => { if (current?.slot === slot) advance(); },
       (err) => {
@@ -378,7 +386,13 @@ async function advance() {
 }
 
 // Live updates from the admin page.
-const events = new EventSource('/api/events');
+const events = new EventSource(`/api/events?player=${PLAYER_ID}&visible=${visible() ? 1 : 0}`);
+// The reconnect URL carries the visibility from page load, so resend it.
+events.addEventListener('open', () => post('/api/player-status', { visible: visible() }));
+document.addEventListener('visibilitychange', () => {
+  post('/api/player-status', { visible: visible() });
+  if (visible() && current) post('/api/now-playing', { id: current.item.id });
+});
 events.addEventListener('playlist-changed', async () => {
   await refresh();
   // If the current item was disabled or deleted, move on now.
