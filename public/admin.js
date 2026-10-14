@@ -68,7 +68,7 @@ function render() {
     $('.source', li).textContent = item.source;
     if (item.error) {
       $('.error', li).hidden = false;
-      $('.error', li).textContent = `⚠ Skipped last time: ${item.error}`;
+      $('.error', li).textContent = `⚠ Skipped: ${item.error}`;
     }
 
     const dur = $('.dur input', li);

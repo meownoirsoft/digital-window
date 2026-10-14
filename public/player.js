@@ -2,7 +2,11 @@
 // Each item is mounted into the hidden layer, shown once it's actually playing,
 // then crossfaded in. Playlist edits arrive over SSE and apply from the next item.
 
-const READY_TIMEOUT_MS = 25_000;
+// A Pi can take a while to start YouTube, especially right after boot.
+const READY_TIMEOUT_MS = 45_000;
+// One-off hiccups (slow start, stall, network blip) are only flagged in the
+// admin page once an item has hit this many in a row.
+const FLAG_AFTER_HICCUPS = 3;
 const STALL_LIMIT_MS = 60_000;
 const RETRY_MS = 10_000;
 const RELOAD_AFTER_MS = 24 * 60 * 60 * 1000;
@@ -18,6 +22,7 @@ let current = null;       // { item, slot }
 let lastIndex = -1;
 let busy = false;
 let failStreak = 0;
+const hiccups = new Map();   // item id -> consecutive one-off failures
 let retryTimer = null;
 const bootedAt = Date.now();
 
@@ -133,6 +138,8 @@ async function mountYouTube(layer, { videoId, channelId, listId, start = 0, isLi
         },
         onError: (e) => {
           const err = new Error(YT_ERRORS[e.data] || `YouTube error ${e.data}`);
+          // Removed, private, can't be embedded, bad ID: retrying won't help.
+          err.permanent = [2, 100, 101, 150, 153].includes(e.data);
           if (listId && playNextInList()) {
             console.warn('[window] playlist: skipping a video:', err.message);
             return;
@@ -188,7 +195,11 @@ function mountVideo(layer, url, maxSec, captionText) {
   caption(layer, captionText);
   slot.ready = new Promise((resolve, reject) => {
     v.addEventListener('playing', resolve, { once: true });
-    v.addEventListener('error', () => reject(new Error('Video failed to load')), { once: true });
+    v.addEventListener('error', () => {
+      const err = new Error(v.error?.code === 4 ? 'Video format not supported' : 'Video failed to load');
+      err.permanent = v.error?.code === 4;
+      reject(err);
+    }, { once: true });
     v.play().catch(() => {});
   }).then(() => {
     if (maxSec) timer(slot, maxSec);
@@ -293,6 +304,20 @@ function scheduleRetry(ms) {
   retryTimer = setTimeout(advance, ms);
 }
 
+// Show a warning in the admin page only when it's worth acting on: problems
+// that won't fix themselves, or an item that keeps failing.
+function reportFailure(item, err) {
+  if (err.permanent) {
+    post(`/api/items/${item.id}/error`, { error: err.message });
+    return;
+  }
+  const n = (hiccups.get(item.id) ?? 0) + 1;
+  hiccups.set(item.id, n);
+  if (n >= FLAG_AFTER_HICCUPS) {
+    post(`/api/items/${item.id}/error`, { error: `Failed ${n} times in a row (${err.message})` });
+  }
+}
+
 async function advance() {
   if (busy) return;
   busy = true;
@@ -319,7 +344,7 @@ async function advance() {
       slot?.destroy();
       back.replaceChildren();
       console.warn('[window] skipping', item.id, item.title, err.message);
-      post(`/api/items/${item.id}/error`, { error: err.message });
+      reportFailure(item, err);
       failStreak += 1;
       // Pretend we played it so pickNext moves past it.
       current = { item, slot: current?.slot ?? makeSlot() };
@@ -328,6 +353,7 @@ async function advance() {
     }
 
     failStreak = 0;
+    hiccups.delete(item.id);
     idle.hidden = true;
     const old = current?.slot;
     back.classList.add('show');
@@ -342,7 +368,7 @@ async function advance() {
       () => { if (current?.slot === slot) advance(); },
       (err) => {
         if (current?.slot !== slot) return;
-        post(`/api/items/${item.id}/error`, { error: err.message });
+        reportFailure(item, err);
         advance();
       },
     );
