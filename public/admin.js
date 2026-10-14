@@ -81,6 +81,7 @@ function render() {
 
     $('.del', li).addEventListener('click', async () => {
       try { await api(`/api/items/${item.id}`, { method: 'DELETE' }); } catch (e) { say(e.message, 'err'); }
+      load();
     });
     return li;
   }));
@@ -99,17 +100,22 @@ async function load() {
 
 async function patch(id, body) {
   try { await api(`/api/items/${id}`, { method: 'PATCH', body }); } catch (e) { say(e.message, 'err'); }
+  load();
 }
 
 Sortable.create(list, {
   handle: '.handle',
   animation: 150,
   onStart: () => { dragging = true; },
+  // Fires on every release, even when a touch drag is cancelled, so the list
+  // can never stay frozen waiting for a drag that ended.
+  onUnchoose: () => { dragging = false; },
   onEnd: async () => {
     dragging = false;
     const ids = [...list.children].map((li) => Number(li.dataset.id));
     items.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
-    try { await api('/api/items/order', { method: 'PUT', body: { ids } }); } catch (e) { say(e.message, 'err'); load(); }
+    try { await api('/api/items/order', { method: 'PUT', body: { ids } }); } catch (e) { say(e.message, 'err'); }
+    load();
   },
 });
 
@@ -117,6 +123,7 @@ Sortable.create(list, {
 async function add(body, label) {
   const item = await api('/api/items', { method: 'POST', body });
   say(`Added “${item.title || label}”.`);
+  load();
   return item;
 }
 
@@ -199,8 +206,13 @@ sf.addEventListener('submit', (e) => {
 });
 
 // --- Live updates -------------------------------------------------------------
+// Changes made elsewhere (another phone, the player reporting errors) arrive as
+// server events. Phones drop this connection when the screen sleeps, so also
+// reload whenever it reconnects or the page comes back into view.
 const events = new EventSource('/api/events');
 events.addEventListener('playlist-changed', load);
+events.addEventListener('open', load);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 events.addEventListener('now-playing', (e) => {
   nowPlayingId = JSON.parse(e.data)?.id ?? null;
   render();
