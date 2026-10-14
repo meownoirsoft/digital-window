@@ -18,6 +18,12 @@ const presets = JSON.parse(readFileSync(join(root, 'presets.json'), 'utf8'));
 const app = Fastify({ logger: { level: process.env.LOG_LEVEL || 'info' } });
 await app.register(fastifyStatic, { root: join(root, 'public') });
 
+// A display never needs these. Denying them here also covers embedded YouTube
+// iframes, so nothing on the page can trigger a camera/mic permission prompt.
+app.addHook('onSend', async (req, reply) => {
+  reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), display-capture=()');
+});
+
 // --- Server-Sent Events hub ---------------------------------------------------
 const clients = new Set();
 let nowPlaying = null;

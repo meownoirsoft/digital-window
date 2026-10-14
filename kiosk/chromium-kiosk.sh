@@ -18,5 +18,6 @@ exec "$BROWSER" \
   --noerrdialogs --disable-infobars --no-first-run \
   --disable-session-crashed-bubble --disable-features=Translate \
   --autoplay-policy=no-user-gesture-required \
+  --deny-permission-prompts \
   --check-for-update-interval=31536000 \
   --password-store=basic

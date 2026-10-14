@@ -61,6 +61,7 @@ LABWC_AUTOSTART="$HOME_DIR/.config/labwc/autostart"
 WAYFIRE_INI="$HOME_DIR/.config/wayfire.ini"
 XDG_AUTOSTART="$HOME_DIR/.config/autostart/digital-window-kiosk.desktop"
 UNIT_FILE="/etc/systemd/system/$SERVICE.service"
+CHROMIUM_POLICY=/etc/chromium/policies/managed/digital-window.json
 
 remove_autostart() {
   [ -f "$LABWC_AUTOSTART" ] && sed -i "/$MARK/d" "$LABWC_AUTOSTART"
@@ -74,6 +75,7 @@ if [ "$UNINSTALL" = 1 ]; then
   sudo rm -f "$UNIT_FILE"
   sudo systemctl daemon-reload
   remove_autostart
+  sudo rm -f "$CHROMIUM_POLICY"
   say "Done. App files and data were left in place; delete the folder to remove them."
   exit 0
 fi
@@ -186,6 +188,19 @@ if [ "$KIOSK" = 1 ]; then
     pkg install -y -qq chromium-browser 2>/dev/null || pkg install -y -qq chromium
   fi
   has unclutter || pkg install -y -qq unclutter 2>/dev/null || true
+
+  # The display never needs a camera or mic. Turning them off in Chromium stops
+  # the desktop's "Allow app to use camera" dialog from popping up over the player.
+  # (This applies to Chromium on this Pi generally; --uninstall removes it.)
+  sudo mkdir -p "$(dirname "$CHROMIUM_POLICY")"
+  sudo tee "$CHROMIUM_POLICY" >/dev/null <<'EOF'
+{
+  "VideoCaptureAllowed": false,
+  "AudioCaptureAllowed": false,
+  "DefaultGeolocationSetting": 2,
+  "DefaultNotificationsSetting": 2
+}
+EOF
 
   LAUNCH="$APP_DIR/kiosk/chromium-kiosk.sh http://localhost:$APP_PORT/player"
   chmod +x "$APP_DIR/kiosk/chromium-kiosk.sh"

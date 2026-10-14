@@ -83,6 +83,7 @@ The bundle already contains its dependencies. The Pi still needs internet access
 | Desktop shows but no player | Check the autostart entry: `grep digital ~/.config/labwc/autostart`. You can start the player by hand with `~/digital-window/kiosk/chromium-kiosk.sh`. |
 | A video is skipped with ⚠ in the admin page | The owner disabled embedding, or the video is private, removed or region-blocked. This can't be worked around; pick another video. |
 | APOD or EPIC fails sometimes | NASA rate-limits `DEMO_KEY`. Put your own key in `~/digital-window/.env` (`NASA_API_KEY=…`), then `sudo systemctl restart digital-window`. |
+| "Allow app to use camera" dialog on the TV | Choose **Deny**. The app never uses a camera. Re-run the install command (option B) to update; it turns camera and mic access off for Chromium so the dialog doesn't come back. |
 | Screen goes black after a while | Run `sudo raspi-config` → Display Options → Screen Blanking → No. |
 
 ---
