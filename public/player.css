@@ -86,3 +86,7 @@ html, body {
 .idle-urls { font-size: 1.5vw; line-height: 1.6; margin-top: 3vh; font-family: ui-monospace, Menlo, Consolas, monospace; }
 .idle-urls span { display: block; }
 .idle-urls span + span { opacity: .6; font-size: .85em; }
+
+/* Outside the screen schedule: plain black over everything, including the idle screen. */
+#sleep { position: fixed; inset: 0; z-index: 10; background: #000; }
+#sleep[hidden] { display: none; }

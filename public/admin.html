@@ -70,6 +70,23 @@
       <p id="empty" class="hint" hidden>Nothing yet. Add a video or a NASA feed above.</p>
     </section>
 
+    <section class="panel screen">
+      <div class="list-head">
+        <h2>Screen</h2>
+        <span id="clock" class="hint"></span>
+      </div>
+      <div class="screen-now">
+        <span id="screen-state" class="screen-state" role="status"></span>
+        <button id="screen-toggle" class="btn ghost" type="button"></button>
+      </div>
+      <form id="schedule-form">
+        <label class="check"><input id="sched-enabled" type="checkbox"> Turn the screen on and off on a schedule</label>
+        <div id="sched-days" class="sched-days"></div>
+        <p class="hint">An off time earlier than the on time runs past midnight. Switching the screen on or off by hand lasts until the next scheduled change.</p>
+        <div class="row"><button class="btn" type="submit">Save schedule</button> <span id="sched-msg" role="status"></span></div>
+      </form>
+    </section>
+
     <details class="panel settings">
       <summary>Settings</summary>
       <form id="settings-form" class="settings-grid">

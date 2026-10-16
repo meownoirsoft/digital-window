@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openDb } from './db.js';
 import { parseYouTube, parsePlaylist, parseTime } from './lib/youtube.js';
+import { DEFAULT_SCHEDULE, normalizeSchedule, screenState, makeOverride, timeLabel } from './lib/schedule.js';
 import { searchLibrary, resolveAsset, resolveApod, resolveEpic, resolveChannelLive } from './lib/nasa.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -49,6 +50,7 @@ app.get('/api/events', (req, reply) => {
     Connection: 'keep-alive',
   });
   res.write(`event: now-playing\ndata: ${JSON.stringify(nowPlaying)}\n\n`);
+  res.write(`event: screen\ndata: ${JSON.stringify(screen())}\n\n`);
   clients.add(res);
   const playerId = typeof req.query.player === 'string' ? req.query.player.slice(0, 64) : null;
   if (playerId) {
@@ -247,6 +249,48 @@ app.put('/api/settings', async (req) => {
   db.setSettings(req.body ?? {});
   changed();
   return db.getSettings();
+});
+
+// --- Screen schedule ----------------------------------------------------------
+// The player blanks itself while the screen is "off", and the kiosk polls
+// /api/screen/power to put the display itself to sleep (see kiosk/screen-power.sh).
+const schedule = () => db.getJson('schedule', DEFAULT_SCHEDULE);
+function screen() {
+  const now = Date.now();
+  const s = screenState(schedule(), db.getJson('screen_override'), now);
+  if (s.next) s.next.label = timeLabel(s.next.at, now);
+  return { ...s, clock: timeLabel(now, now) };
+}
+
+let lastScreenOn = screen().on;
+function screenChanged() {
+  const s = screen();
+  lastScreenOn = s.on;
+  broadcast('screen', s);
+  return s;
+}
+// Catch scheduled changes as they happen, and drop overrides that have run out.
+setInterval(() => {
+  const o = db.getJson('screen_override');
+  if (o?.until != null && Date.now() >= o.until) db.setJson('screen_override', null);
+  if (screen().on !== lastScreenOn) screenChanged();
+}, 10_000).unref();
+
+app.get('/api/screen', () => screen());
+app.get('/api/screen/power', (req, reply) => reply.type('text/plain').send(screen().on ? 'on' : 'off'));
+app.post('/api/screen', async (req) => {
+  if (typeof req.body?.on !== 'boolean') throw bad('on must be true or false.');
+  db.setJson('screen_override', makeOverride(schedule(), req.body.on));
+  return screenChanged();
+});
+app.get('/api/schedule', () => schedule());
+app.put('/api/schedule', async (req) => {
+  const s = normalizeSchedule(req.body);
+  db.setJson('schedule', s);
+  // A new schedule starts clean rather than inheriting an old "on/off now".
+  db.setJson('screen_override', null);
+  screenChanged();
+  return s;
 });
 
 // --- NASA ---------------------------------------------------------------------

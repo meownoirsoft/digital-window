@@ -95,7 +95,9 @@ input[type=text], input[type=search], input[type=number], select {
 
 #msg { min-height: 1.2em; margin: 10px 0 0; font-size: 14px; }
 #msg.err { color: var(--danger); }
-#msg.ok { color: var(--ok); }
+#msg.ok, #sched-msg.ok { color: var(--ok); }
+#sched-msg { font-size: 14px; }
+#sched-msg.err { color: var(--danger); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; max-height: 520px; overflow-y: auto; }
 .result { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
@@ -150,6 +152,19 @@ input[type=text], input[type=search], input[type=number], select {
 .settings summary { cursor: pointer; font-weight: 600; }
 .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; align-items: end; }
 .settings-grid label:not(.check) { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+
+input[type=time] { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; }
+.screen-now { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.screen-state { font-weight: 600; }
+.screen-state.on::before { content: "● "; color: var(--ok); }
+.screen-state.off::before { content: "● "; color: var(--muted); }
+#schedule-form { display: grid; gap: 10px; justify-items: start; border-top: 1px solid var(--line); padding-top: 14px; }
+#schedule-form .check { color: var(--text); font-weight: 600; }
+.sched-days { display: grid; grid-template-columns: auto auto auto; gap: 6px 14px; align-items: center; }
+.sched-days.off { opacity: .5; }
+.sched-days .day { min-width: 9ch; }
+.sched-days label:not(.check) { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+.sched-days input:disabled { opacity: .45; }
 
 @media (max-width: 640px) {
   .item { grid-template-columns: auto 72px minmax(0, 1fr) auto; grid-template-areas: "h t m d" "h t s x"; }

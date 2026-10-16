@@ -57,6 +57,8 @@ export function openDb(file) {
     del: db.prepare('DELETE FROM items WHERE id = ?'),
     setPos: db.prepare('UPDATE items SET position = ? WHERE id = ?'),
     settings: db.prepare('SELECT key, value FROM settings'),
+    getSetting: db.prepare('SELECT value FROM settings WHERE key = ?'),
+    delSetting: db.prepare('DELETE FROM settings WHERE key = ?'),
     setSetting: db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'),
   };
 
@@ -95,11 +97,22 @@ export function openDb(file) {
       ids.forEach((id, i) => q.setPos.run(i, id));
     }),
 
-    getSettings: () => Object.fromEntries(q.settings.all().map((r) => [r.key, r.value])),
+    getSettings: () => Object.fromEntries(q.settings.all().filter((r) => r.key in DEFAULT_SETTINGS).map((r) => [r.key, r.value])),
     setSettings: transaction((obj) => {
       for (const [k, v] of Object.entries(obj)) {
         if (k in DEFAULT_SETTINGS) q.setSetting.run(k, String(v));
       }
     }),
+
+    // Structured values (the screen schedule and its override), stored as JSON
+    // alongside the settings but not editable through setSettings.
+    getJson(key, fallback = null) {
+      const r = q.getSetting.get(key);
+      return r ? JSON.parse(r.value) : fallback;
+    },
+    setJson(key, value) {
+      if (value == null) q.delSetting.run(key);
+      else q.setSetting.run(key, JSON.stringify(value));
+    },
   };
 }

@@ -189,10 +189,14 @@ if [ "$KIOSK" = 1 ]; then
     pkg install -y -qq chromium-browser 2>/dev/null || pkg install -y -qq chromium
   fi
   has unclutter || pkg install -y -qq unclutter 2>/dev/null || true
+  # cec-ctl (in v4l-utils) puts a TV in standby and wakes it for the screen schedule.
+  has cec-ctl || pkg install -y -qq v4l-utils 2>/dev/null || warn "Couldn't install v4l-utils; the screen schedule can't switch the TV off over HDMI-CEC"
   # Used by the kiosk to set the screen to KIOSK_RESOLUTION on Wayland desktops.
   # wlrctl parks the mouse pointer in the corner so it's hidden.
   if has labwc || has wayfire; then
     has wlr-randr || pkg install -y -qq wlr-randr 2>/dev/null || true
+    # wlopm switches the display's signal off and on for the screen schedule.
+    has wlopm || pkg install -y -qq wlopm 2>/dev/null || warn "wlopm isn't available; outside the screen schedule the player shows black but the display stays on"
     has wlrctl || pkg install -y -qq wlrctl 2>/dev/null || warn "wlrctl isn't available (Bookworm); the mouse pointer hides once the mouse is moved"
   fi
 

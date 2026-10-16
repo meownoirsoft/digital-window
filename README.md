@@ -105,6 +105,7 @@ Uninstall removes the managed policy file but keeps the kiosk profile.
 | Chromium pop-ups over the player ("Fix those tabs", what's new, sign in, translate…) | Re-run the install command (option B) and reboot. The kiosk browser uses its own clean profile, and promotions and nags are turned off. |
 | Video is choppy | Update (re-run the option B command) and reboot to get H.264 video. If it's still choppy, set `KIOSK_RESOLUTION=3840x2160@30Hz` (or `1920x1080`) in `~/digital-window/.env` and reboot, and use Ethernet if Wi-Fi is weak. |
 | Mouse pointer visible on the player | Update and reboot. The kiosk moves the pointer into the bottom-right corner, which makes Chromium hide it. This needs `wlrctl`, which is available on Raspberry Pi OS Trixie. On Bookworm, nudge the mouse once (or unplug it) and the pointer disappears. |
+| TV doesn't turn off or on with the screen schedule | Turn on HDMI-CEC in the TV's settings, and use the HDMI port next to the Pi's power socket. If it still doesn't respond, set `KIOSK_SCREEN_POWER=dpms` (or `none`) in `~/digital-window/.env` and reboot. See [Screen schedule](#screen-schedule). |
 | Screen goes black after a while | Run `sudo raspi-config` → Display Options → Screen Blanking → No. |
 
 ---
@@ -130,6 +131,23 @@ APOD (Astronomy Picture of the Day) is re-checked each time it comes round, so i
 - **YouTube plays as H.264.** The kiosk loads a small built-in extension ([`kiosk/h264-extension`](kiosk/h264-extension)) that makes YouTube send H.264 instead of VP9 or AV1. A Pi 5 has no hardware decoder for those formats, and decoding 4K VP9 or AV1 on its CPU is what makes video choppy. YouTube's H.264 goes up to **1080p**, which is scaled up to the 4K screen. True 4K YouTube needs a device with hardware VP9/AV1 decoding.
 - **Still choppy?** Set `KIOSK_RESOLUTION` in `~/digital-window/.env` and reboot. `3840x2160@30Hz` is 4K with half the redraw work; `1920x1080` is the smoothest.
 - **More powerful hardware** (for example a mini PC that can decode VP9/AV1): set `KIOSK_H264=0` to let YouTube send 4K.
+
+### Screen schedule
+
+In the admin page's **Screen** panel, tick *Turn the screen on and off on a schedule* and set on and off times for each day (for example weekdays 08:00–18:00, weekends off). Times use the Pi's clock and time zone, which the panel shows. An off time earlier than the on time runs past midnight.
+
+**Turn off now / Turn on now** overrides the schedule until its next change: leave early and switch off, and it comes back on at the next scheduled on time.
+
+While the screen is off, the player stops and shows black, so nothing streams. On the Pi the kiosk also puts the display itself to sleep, chosen by `KIOSK_SCREEN_POWER` in `~/digital-window/.env`:
+
+| Value | What happens |
+|---|---|
+| `both` (default) | HDMI-CEC tells the TV to go to standby (and wakes it and switches to the Pi's input later), and the Pi stops sending a picture |
+| `cec` | HDMI-CEC only. Use this if the TV wakes up or complains about "no signal" when the picture stops |
+| `dpms` | Stop the picture only. Right for computer monitors, which sleep without a signal |
+| `none` | Leave the display on; the player just shows black |
+
+CEC needs to be turned on in the TV's settings (it's often called Anynet+, Bravia Sync, SimpLink or similar). Re-run the installer after updating so the Pi has `cec-ctl` and `wlopm`, then reboot. To check it, run `~/digital-window/kiosk/screen-power.sh off` (and `on`) in a terminal on the Pi's desktop; what the schedule did is in `journalctl -t digital-window-screen`.
 
 Tips:
 - The player reloads itself once a day to keep a long-running browser healthy.

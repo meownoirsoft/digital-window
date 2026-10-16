@@ -45,6 +45,10 @@ let current = null;       // { item, slot }
 let lastIndex = -1;
 let busy = false;
 let failStreak = 0;
+// Outside the screen schedule the player stops and shows black, so nothing
+// streams while the display is asleep.
+let screenOn = true;
+const sleepCover = document.getElementById('sleep');
 // Identifies this player to the server, which shows connected players in the
 // admin page and ignores reports from players that aren't on screen.
 const PLAYER_ID = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -349,8 +353,24 @@ function reportFailure(item, err) {
   }
 }
 
+function stopPlayback() {
+  clearTimeout(retryTimer);
+  current?.slot.destroy();
+  current = null;
+  layers.forEach((l) => { l.classList.remove('show'); l.replaceChildren(); });
+}
+
+function setScreen(on) {
+  if (on === screenOn) return;
+  screenOn = on;
+  sleepCover.hidden = on;
+  // Starting over picks up the item that was playing when the screen went off.
+  if (on) advance();
+  else stopPlayback();
+}
+
 async function advance() {
-  if (busy) return;
+  if (busy || !screenOn) return;
   busy = true;
   clearTimeout(retryTimer);
   try {
@@ -358,9 +378,7 @@ async function advance() {
 
     const item = pickNext();
     if (!item) {
-      current?.slot.destroy();
-      current = null;
-      layers.forEach((l) => { l.classList.remove('show'); l.replaceChildren(); });
+      stopPlayback();
       if (idle.hidden) showIdleInfo();
       idle.hidden = false;
       return scheduleRetry(RETRY_MS);
@@ -372,9 +390,11 @@ async function advance() {
     try {
       slot = await mount(item, back);
       await withTimeout(slot.ready, READY_TIMEOUT_MS, 'Timed out waiting for playback to start');
+      if (!screenOn) throw Object.assign(new Error('Screen turned off'), { quiet: true });
     } catch (err) {
       slot?.destroy();
       back.replaceChildren();
+      if (err.quiet || !screenOn) return;
       console.warn('[window] skipping', item.id, item.title, err.message);
       reportFailure(item, err);
       failStreak += 1;
@@ -417,6 +437,7 @@ document.addEventListener('visibilitychange', () => {
   post('/api/player-status', { visible: visible() });
   if (visible() && current) post('/api/now-playing', { id: current.item.id });
 });
+events.addEventListener('screen', (e) => setScreen(JSON.parse(e.data)?.on !== false));
 events.addEventListener('playlist-changed', async () => {
   await refresh();
   // If the current item was disabled or deleted, move on now.
@@ -431,4 +452,6 @@ addEventListener('keydown', (e) => {
 });
 
 await refresh();
+// Start dark if the screen is scheduled off, rather than flashing a video first.
+await api('/api/screen').then((s) => { screenOn = s.on !== false; sleepCover.hidden = screenOn; }, () => {});
 advance();

@@ -220,6 +220,87 @@ sf.addEventListener('submit', (e) => {
   });
 });
 
+// --- Screen schedule ------------------------------------------------------------
+const DAYS = [[1, 'Monday'], [2, 'Tuesday'], [3, 'Wednesday'], [4, 'Thursday'], [5, 'Friday'], [6, 'Saturday'], [0, 'Sunday']];
+const schedForm = $('#schedule-form');
+const schedDays = $('#sched-days');
+let screenOn = true;
+
+function renderScreen(st) {
+  screenOn = st.on;
+  const el = $('#screen-state');
+  el.className = `screen-state ${st.on ? 'on' : 'off'}`;
+  const parts = [st.on ? 'Screen is on' : 'Screen is off'];
+  if (st.reason === 'manual') parts[0] += st.on ? ' (switched on by hand)' : ' (switched off by hand)';
+  if (st.next) parts.push(`${st.next.on ? 'turns on' : 'turns off'} ${/^\d/.test(st.next.label) ? 'at ' : ''}${st.next.label}`);
+  else if (st.reason === 'schedule' && !st.on) parts.push('no on times are scheduled');
+  el.textContent = parts.join(' · ');
+  $('#screen-toggle').textContent = st.on ? 'Turn off now' : 'Turn on now';
+  $('#clock').textContent = st.clock ? `Time on the Pi: ${st.clock}` : '';
+}
+
+async function loadScreen() {
+  try { renderScreen(await api('/api/screen')); } catch { /* shown again on the next event */ }
+}
+
+$('#screen-toggle').addEventListener('click', (e) => busy(e.currentTarget, async () => {
+  renderScreen(await api('/api/screen', { method: 'POST', body: { on: !screenOn } }));
+}));
+
+function syncScheduleEnabled() {
+  const on = $('#sched-enabled').checked;
+  schedDays.classList.toggle('off', !on);
+  for (const row of schedDays.querySelectorAll('[data-day]')) {
+    const dayOn = on && $('.day-on', row).checked;
+    $('.day-on', row).disabled = !on;
+    for (const t of row.querySelectorAll('input[type=time]')) t.disabled = !dayOn;
+  }
+}
+
+async function loadSchedule() {
+  const sched = await api('/api/schedule').catch(() => null);
+  if (!sched) return;
+  $('#sched-enabled').checked = sched.enabled;
+  schedDays.replaceChildren(...DAYS.flatMap(([d, name]) => {
+    const day = sched.days[d];
+    const row = document.createElement('div');
+    row.style.display = 'contents';
+    row.dataset.day = d;
+    row.innerHTML = '<label class="check day"><input type="checkbox" class="day-on"> <span></span></label>'
+      + '<label>On <input type="time" class="t-on" required></label>'
+      + '<label>Off <input type="time" class="t-off" required></label>';
+    $('span', row).textContent = name;
+    $('.day-on', row).checked = day.enabled;
+    $('.t-on', row).value = day.on;
+    $('.t-off', row).value = day.off;
+    $('.day-on', row).addEventListener('change', syncScheduleEnabled);
+    return row;
+  }));
+  syncScheduleEnabled();
+}
+$('#sched-enabled').addEventListener('change', syncScheduleEnabled);
+
+// Messages show next to the Save button: the main one is out of sight up the page.
+schedForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = e.submitter, out = $('#sched-msg');
+  btn.disabled = true;
+  try {
+    const days = [];
+    for (const row of schedDays.querySelectorAll('[data-day]')) {
+      days[Number(row.dataset.day)] = { enabled: $('.day-on', row).checked, on: $('.t-on', row).value, off: $('.t-off', row).value };
+    }
+    await api('/api/schedule', { method: 'PUT', body: { enabled: $('#sched-enabled').checked, days } });
+    out.textContent = 'Schedule saved.';
+    out.className = 'ok';
+  } catch (err) {
+    out.textContent = err.message;
+    out.className = 'err';
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 // --- Live updates -------------------------------------------------------------
 // Changes made elsewhere (another phone, the player reporting errors) arrive as
 // server events. Phones drop this connection when the screen sleeps, so also
@@ -244,6 +325,9 @@ events.addEventListener('players', (e) => {
     el.title = `Close /player in other tabs or devices: ${list.map((p) => `${p.ip}${p.visible ? '' : ' (hidden)'}`).join(', ')}`;
   }
 });
+events.addEventListener('screen', (e) => renderScreen(JSON.parse(e.data)));
+// Keeps the Pi's clock and "turns off at…" current while the page is open.
+setInterval(() => { if (!document.hidden) loadScreen(); }, 60_000);
 events.addEventListener('now-playing', (e) => {
   nowPlayingId = JSON.parse(e.data)?.id ?? null;
   render();
@@ -252,3 +336,4 @@ events.addEventListener('now-playing', (e) => {
 load();
 loadPresets();
 loadSettings();
+loadSchedule();

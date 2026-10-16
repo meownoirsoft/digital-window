@@ -44,6 +44,15 @@ kiosk_pid=$$
 ) >/dev/null 2>&1 &
 command -v unclutter >/dev/null && unclutter -idle 0.5 -root &
 
+# Put the display to sleep outside the screen schedule set in the admin page.
+ORIGIN=$(printf '%s' "$URL" | sed -E 's#^([a-z]+://[^/]+).*#\1#')
+# Its messages go to the system log: journalctl -t digital-window-screen
+if command -v logger >/dev/null; then
+  "$HERE/screen-power.sh" follow "$ORIGIN/api/screen/power" "$kiosk_pid" 2>&1 </dev/null | logger -t digital-window-screen >/dev/null 2>&1 &
+else
+  "$HERE/screen-power.sh" follow "$ORIGIN/api/screen/power" "$kiosk_pid" </dev/null >/dev/null 2>&1 &
+fi
+
 if [ "$RES" != auto ]; then
   if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wlr-randr >/dev/null; then
     for out in $(wlr-randr | awk '/^[^ ]/ {print $1}'); do
