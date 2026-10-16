@@ -206,7 +206,7 @@ if [ "$KIOSK" = 1 ]; then
   sudo install -D -o root -g root -m 0644 "$APP_DIR/kiosk/chromium-policy.json" "$CHROMIUM_POLICY"
 
   LAUNCH="$APP_DIR/kiosk/chromium-kiosk.sh http://localhost:$APP_PORT/player"
-  chmod +x "$APP_DIR/kiosk/chromium-kiosk.sh"
+  chmod +x "$APP_DIR/kiosk/chromium-kiosk.sh" "$APP_DIR/kiosk/screen-power.sh"
   remove_autostart   # start clean so re-runs don't duplicate entries
 
   # labwc: a user autostart file replaces the system one, so start from a copy
